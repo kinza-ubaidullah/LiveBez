@@ -51,7 +51,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ lang: 
                         }
                     }
                 }
-            },
+            } as any,
             seo: true
         }
     });
@@ -68,14 +68,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ lang: 
                         }
                     }
                 }
-            },
+            } as any,
             seo: true
         }
     });
 
     if (!finalTrans) notFound();
 
-    const article = finalTrans.article;
+    const article = (finalTrans as any).article;
     const categoryName = article.category?.translations[0]?.name || article.category?.key || 'Sports';
 
     // Structured Data (JSON-LD)
@@ -122,7 +122,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ lang: 
                 </div>
 
                 <h1 className="text-4xl md:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tighter">
-                    {finalTrans.seo?.h1 || finalTrans.title}
+                    {(finalTrans as any).seo?.h1 || finalTrans.title}
                 </h1>
 
                 {finalTrans.excerpt && (
