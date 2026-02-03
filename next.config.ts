@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
         hostname: 'media.api-sports.io',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
+        pathname: '/**',
+      },
     ],
 
   },

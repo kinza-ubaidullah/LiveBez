@@ -7,11 +7,11 @@ import { generatePageMetadata } from "@/lib/seo";
 import { apiSports } from "@/lib/sports-api";
 import LeagueStandings from "@/components/LeagueStandings";
 
-// Helper to fetch league by slug or ID
-async function getLeagueData(identifier: string, lang: string) {
-    // 1. Try fetching by exact slug (Translation)
-    let leagueTrans = await prisma.leagueTranslation.findUnique({
-        where: { slug: identifier },
+// Helper to fetch league by slug
+async function getLeagueData(slug: string, lang: string) {
+    // 1. Fetch by exact slug in the Translation table
+    const leagueTrans = await prisma.leagueTranslation.findUnique({
+        where: { slug: slug },
         include: {
             seo: true,
             league: {
@@ -32,34 +32,11 @@ async function getLeagueData(identifier: string, lang: string) {
         }
     });
 
-    // 2. If not found, try fetching by League API ID (e.g. "39")
-    if (!leagueTrans) {
-        const leagueByApi = await prisma.league.findUnique({
-            where: { apiId: identifier },
-            include: {
-                translations: { where: { languageCode: lang } },
-                matches: {
-                    where: {
-                        date: { gte: new Date() },
-                        translations: { some: { languageCode: lang } }
-                    },
-                    include: {
-                        translations: { where: { languageCode: lang } },
-                        prediction: true
-                    },
-                    orderBy: { date: 'asc' }
-                }
-            }
-        });
-
-        if (leagueByApi && leagueByApi.translations[0]) {
-            // Construct a compatible object using the current language translation
-            leagueTrans = {
-                ...leagueByApi.translations[0],
-                league: leagueByApi,
-                seo: null // or fetch if needed
-            } as any;
-        }
+    // 2. Strict check: If it doesn't belong to the current language, or doesn't exist, we return null
+    // Note: If the slug exists but belongs to another language, it will still match findUnique by slug.
+    // We must ensure the languageCode matches the requested lang.
+    if (!leagueTrans || leagueTrans.languageCode !== lang) {
+        return null;
     }
 
     return leagueTrans;
@@ -92,11 +69,34 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
     // Fetch Real Standings using the DB ID
     const apiId = leagueTrans.league.apiId;
     let standings: any[] = [];
+    let upcomingMatches = leagueTrans.league.matches;
+
     if (apiId) {
         try {
             standings = await apiSports.getStandings(apiId);
+
+            // Fallback for matches if DB is empty for this league
+            if (upcomingMatches.length === 0) {
+                const apiMatches = await apiSports.getLiveScores({ league: apiId, next: '10' });
+                upcomingMatches = apiMatches.map((m: any) => ({
+                    id: m.fixture.id.toString(),
+                    homeTeam: m.teams.home.name,
+                    homeTeamLogo: m.teams.home.logo,
+                    awayTeam: m.teams.away.name,
+                    awayTeamLogo: m.teams.away.logo,
+                    date: m.fixture.date,
+                    status: m.fixture.status.short,
+                    mainTip: "Analysis Pending",
+                    confidence: 70,
+                    prediction: { winProbHome: 33, winProbDraw: 33, winProbAway: 33 }, // Mock for fallback
+                    translations: [{
+                        slug: `${m.teams.home.name}-vs-${m.teams.away.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                        name: `${m.teams.home.name} vs ${m.teams.away.name}`
+                    }]
+                })) as any;
+            }
         } catch (err) {
-            console.error("Failed to fetch standings:", err);
+            console.error("Failed to fetch league data fallback:", err);
         }
     }
 
@@ -117,6 +117,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                             src={leagueTrans.league.logoUrl}
                             alt={leagueTrans.name}
                             fill
+                            sizes="64px"
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                     ) : (
@@ -143,7 +144,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                             <h2 className="font-bold text-slate-900 dark:text-white">{t.ui.upcomingMatches}</h2>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {leagueTrans.league.matches.map((match: any) => {
+                            {upcomingMatches.map((match: any) => {
                                 const matchTrans = match.translations[0];
                                 if (!matchTrans) return null;
                                 return (
@@ -157,7 +158,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                                                 <div className="font-bold text-sm md:text-lg text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition truncate">{match.homeTeam}</div>
                                                 <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex-shrink-0 relative overflow-hidden flex items-center justify-center text-[10px] md:text-xs font-black">
                                                     {match.homeTeamLogo ? (
-                                                        <Image src={match.homeTeamLogo} alt={match.homeTeam} fill className="object-contain p-1" />
+                                                        <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="40px" className="object-contain p-1" />
                                                     ) : (
                                                         match.homeTeam.substring(0, 1)
                                                     )}
@@ -174,7 +175,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                                             <div className="flex items-center justify-start gap-2 md:gap-3 text-left">
                                                 <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex-shrink-0 relative overflow-hidden flex items-center justify-center text-[10px] md:text-xs font-black">
                                                     {match.awayTeamLogo ? (
-                                                        <Image src={match.awayTeamLogo} alt={match.awayTeam} fill className="object-contain p-1" />
+                                                        <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="40px" className="object-contain p-1" />
                                                     ) : (
                                                         match.awayTeam.substring(0, 1)
                                                     )}
@@ -197,7 +198,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                                     </Link>
                                 );
                             })}
-                            {leagueTrans.league.matches.length === 0 && (
+                            {upcomingMatches.length === 0 && (
                                 <div className="p-12 text-center text-slate-400 dark:text-slate-500">{t.ui.noPredictions}</div>
                             )}
                         </div>

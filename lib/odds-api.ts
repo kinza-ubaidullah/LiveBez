@@ -83,6 +83,8 @@ class OddsApiClient {
             url.searchParams.set(key, value);
         }
 
+        console.log(`📡 Odds API Request: ${url.toString().replace(this.apiKey, 'HIDDEN')}`);
+
         try {
             const response = await fetch(url.toString(), {
                 next: { revalidate }

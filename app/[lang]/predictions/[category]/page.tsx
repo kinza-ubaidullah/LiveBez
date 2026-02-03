@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import PredictionCard from "@/components/PredictionCard";
 import { notFound } from "next/navigation";
 import { Activity, Target, Trophy } from "lucide-react";
+import { apiSports } from "@/lib/sports-api";
 
 export default async function PredictionCategoryPage({
     params
@@ -21,11 +22,19 @@ export default async function PredictionCategoryPage({
     let IconComponent = Target;
 
     if (category === '1x2') {
-        where.mainTip = { contains: 'Win' };
+        // Broaden to show matches even if analysis is pending, so the page isn't empty
+        where.OR = [
+            { mainTip: { contains: 'Win' } },
+            { mainTip: 'Analysis Pending' },
+            { mainTip: 'TBD' }
+        ];
         title = "1X2 Predictions";
         IconComponent = Activity;
     } else if (category === 'btts') {
-        where.mainTip = { contains: 'BTTS' };
+        where.OR = [
+            { mainTip: { contains: 'BTTS' } },
+            { mainTip: 'Analysis Pending' }
+        ];
         title = "BTTS (Both Teams To Score)";
         IconComponent = Target;
     } else if (category === 'over-under') {
@@ -41,7 +50,7 @@ export default async function PredictionCategoryPage({
         where.date = { gte: new Date() };
     }
 
-    const matches = await prisma.match.findMany({
+    let matches = await prisma.match.findMany({
         where,
         include: {
             translations: { where: { languageCode: lang } },
@@ -54,6 +63,31 @@ export default async function PredictionCategoryPage({
         },
         orderBy: { date: 'asc' }
     });
+
+    // Fallback if DB is empty for this category
+    if (matches.length === 0 && category === '1x2') {
+        const apiMatches = await apiSports.getLiveScores({ next: '20' });
+        matches = apiMatches.map((m: any) => ({
+            id: m.fixture.id.toString(),
+            homeTeam: m.teams.home.name,
+            homeTeamLogo: m.teams.home.logo,
+            awayTeam: m.teams.away.name,
+            awayTeamLogo: m.teams.away.logo,
+            date: m.fixture.date,
+            status: m.fixture.status.short,
+            mainTip: "Analysis Pending",
+            league: {
+                translations: [{
+                    name: m.league.name,
+                    slug: m.league.name.toLowerCase().replace(/ /g, '-')
+                }]
+            },
+            translations: [{
+                slug: `${m.fixture.id}-${m.teams.home.name}-vs-${m.teams.away.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                name: `${m.teams.home.name} vs ${m.teams.away.name}`
+            }]
+        })) as any;
+    }
 
     return (
         <div className="container mx-auto px-4 py-12 max-w-7xl">

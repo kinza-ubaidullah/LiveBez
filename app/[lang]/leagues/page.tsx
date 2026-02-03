@@ -8,13 +8,20 @@ export default async function LeaguesPage({ params }: { params: Promise<{ lang: 
     const { lang } = await params;
     const t = getDictionary(lang);
 
-    const leagues = await prisma.league.findMany({
-        include: {
-            translations: {
-                where: { languageCode: lang }
+    let leagues: any[] = [];
+    try {
+        leagues = await prisma.league.findMany({
+            include: {
+                translations: {
+                    where: { languageCode: lang }
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error("Database Connection Failed (Leagues Page):", error);
+        // Fallback: Return empty array to render "No Leagues" state instead of 500 Error
+        leagues = [];
+    }
 
     return (
         <div className="container mx-auto px-4 py-12 max-w-7xl">
@@ -49,6 +56,7 @@ export default async function LeaguesPage({ params }: { params: Promise<{ lang: 
                                             src={league.logoUrl}
                                             alt={trans.name}
                                             fill
+                                            sizes="64px"
                                             className="object-contain p-2 group-hover:scale-110 transition-transform duration-500"
                                         />
                                     ) : (

@@ -1,62 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { apiSports } from '@/lib/sports-api';
+import { NextResponse } from "next/server";
+import { apiSports } from "@/lib/sports-api";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 30; // Revalidate every 30 seconds
-
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
-        // Fetch real-time fixtures from API-Sports
-        const fixtures = await apiSports.getLiveScores({ live: 'all' });
+        console.log("🔌 Connecting to Real Sports API for Live Scores...");
+        // Fetch live matches
+        const liveMatches = await apiSports.getLiveScores({ live: 'all' });
+        console.log(`✅ API Response Received: ${liveMatches?.length || 0} live matches found.`);
 
-        if (!fixtures || fixtures.length === 0) {
-            return NextResponse.json({
-                success: true,
-                data: [],
-                total: 0,
-            });
+        if (!liveMatches || liveMatches.length === 0) {
+            return NextResponse.json({ success: true, data: [] });
         }
 
-        // Map API-Sports structure to our internal LiveMatch type
-        const liveGames = fixtures.map((fixture: any) => ({
-            id: fixture.fixture.id.toString(),
-            homeTeam: fixture.teams.home.name,
-            awayTeam: fixture.teams.away.name,
-            homeScore: fixture.goals.home ?? 0,
-            awayScore: fixture.goals.away ?? 0,
-            time: fixture.fixture.status.elapsed ? `${fixture.fixture.status.elapsed}'` : 'LIVE',
-            status: mapStatus(fixture.fixture.status.short),
-            league: fixture.league.name
+        const formattedMatches = liveMatches.map((m: any) => ({
+            id: m.fixture.id,
+            homeTeam: m.teams.home.name,
+            awayTeam: m.teams.away.name,
+            homeScore: m.goals.home ?? 0,
+            awayScore: m.goals.away ?? 0,
+            time: m.fixture.status.elapsed ? `${m.fixture.status.elapsed}'` : 'LIVE',
+            status: 'LIVE' // Simplifying for the ticker
         }));
 
-        return NextResponse.json({
-            success: true,
-            data: liveGames.slice(0, 15), // Return top 15 live games
-            total: liveGames.length,
-        });
-    } catch (error: any) {
-        console.error('Live scores API error (API-Sports):', error);
-
-        return NextResponse.json(
-            { success: false, error: 'Failed to fetch live scores' },
-            { status: 500 }
-        );
+        return NextResponse.json({ success: true, data: formattedMatches });
+    } catch (error) {
+        console.error("Live Score API Error:", error);
+        return NextResponse.json({ success: false, error: "Failed to fetch live scores" }, { status: 500 });
     }
-}
-
-function mapStatus(short: string): string {
-    const map: Record<string, string> = {
-        '1H': 'LIVE',
-        '2H': 'LIVE',
-        'HT': 'HALFTIME',
-        'ET': 'LIVE',
-        'P': 'LIVE',
-        'FT': 'FINISHED',
-        'AET': 'FINISHED',
-        'PEN': 'FINISHED',
-        'PST': 'POSTPONED',
-        'CANC': 'POSTPONED',
-        'ABD': 'POSTPONED',
-    };
-    return map[short] || 'LIVE';
 }

@@ -183,6 +183,7 @@ export default function Navbar({ lang, t, languages }: NavbarProps) {
                                 src="/logo.png"
                                 alt="LiveBaz Logo"
                                 fill
+                                sizes="(max-width: 768px) 128px, 176px"
                                 className="object-contain ltr:object-left rtl:object-right"
                                 priority
                             />
@@ -232,12 +233,14 @@ export default function Navbar({ lang, t, languages }: NavbarProps) {
                             <input
                                 type="text"
                                 placeholder="Search..."
+                                suppressHydrationWarning={true}
                                 className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 pl-12 pr-6 text-xs font-bold outline-none focus:border-blue-500 transition-all w-48 focus:w-64"
                             />
                         </div>
 
                         <button
                             onClick={() => setIsMenuOpen(true)}
+                            suppressHydrationWarning
                             className="xl:hidden p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
                         >
                             <Menu className="w-5 h-5 text-slate-600 dark:text-slate-300" />
@@ -252,7 +255,7 @@ export default function Navbar({ lang, t, languages }: NavbarProps) {
                     <div className="flex flex-col h-full p-6 pt-24 overflow-y-auto">
                         <div className="flex items-center justify-between mb-8">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Navigation</span>
-                            <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                            <button onClick={() => setIsMenuOpen(false)} suppressHydrationWarning className="p-2 bg-slate-50 dark:bg-slate-900 rounded-xl">
                                 <X className="w-5 h-5 text-slate-900 dark:text-white" />
                             </button>
                         </div>
@@ -280,6 +283,7 @@ export default function Navbar({ lang, t, languages }: NavbarProps) {
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={toggleTheme}
+                                        suppressHydrationWarning
                                         className="flex items-center justify-center gap-2 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300"
                                     >
                                         {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -309,6 +313,7 @@ export default function Navbar({ lang, t, languages }: NavbarProps) {
                             <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
                                 <button
                                     onClick={() => { setIsMenuOpen(false); setIsLoginOpen(true); }}
+                                    suppressHydrationWarning
                                     className="w-full bg-blue-600 text-white py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-600/20"
                                 >
                                     <LogIn className="w-4 h-4" />

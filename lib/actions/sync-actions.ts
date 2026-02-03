@@ -71,7 +71,7 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
         try {
             const oddsResponse = await oddsApi.getOdds(sportKey, {
                 regions: 'eu',
-                markets: 'h2h',
+                markets: 'h2h,btts,totals',
             });
             oddsData = oddsResponse.data;
         } catch (err) {
@@ -111,6 +111,8 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                 // Get odds for this event
                 const eventOdds = oddsData.find(o => o.id === event.id);
                 const h2hOdds = extractH2HOdds(eventOdds);
+                const bttsProb = extractBTTSProb(eventOdds);
+                const totalsProb = extractTotalsProb(eventOdds);
 
                 if (existingMatch) {
                     // Update existing match with latest odds and logos if missing
@@ -123,12 +125,18 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                                 winProbHome: h2hOdds.home,
                                 winProbDraw: h2hOdds.draw,
                                 winProbAway: h2hOdds.away,
+                                bttsProb: bttsProb,
+                                overProb: totalsProb?.over,
+                                underProb: totalsProb?.under,
                             },
                             create: {
                                 matchId: existingMatch.id,
                                 winProbHome: h2hOdds.home,
                                 winProbDraw: h2hOdds.draw,
                                 winProbAway: h2hOdds.away,
+                                bttsProb: bttsProb,
+                                overProb: totalsProb?.over,
+                                underProb: totalsProb?.under,
                             }
                         });
                     }
@@ -203,6 +211,9 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                                     winProbHome: h2hOdds.home,
                                     winProbDraw: h2hOdds.draw,
                                     winProbAway: h2hOdds.away,
+                                    bttsProb: bttsProb,
+                                    overProb: totalsProb?.over,
+                                    underProb: totalsProb?.under,
                                 }
                             } : undefined
                         }
@@ -396,6 +407,49 @@ function extractH2HOdds(event?: OddsEvent): { home: number; draw: number; away: 
         }
     }
 
+    return null;
+}
+
+function extractBTTSProb(event?: OddsEvent): number | null {
+    if (!event?.bookmakers?.length) return null;
+
+    for (const bookmaker of event.bookmakers) {
+        const bttsMarket = bookmaker.markets?.find(m => m.key === 'btts');
+        if (!bttsMarket) continue;
+
+        const yesOutcome = bttsMarket.outcomes.find(o => o.name === 'Yes');
+        const noOutcome = bttsMarket.outcomes.find(o => o.name === 'No');
+
+        if (yesOutcome && noOutcome) {
+            const yesProb = 1 / yesOutcome.price;
+            const noProb = 1 / noOutcome.price;
+            return Math.round((yesProb / (yesProb + noProb)) * 100);
+        }
+    }
+    return null;
+}
+
+function extractTotalsProb(event?: OddsEvent): { over: number; under: number } | null {
+    if (!event?.bookmakers?.length) return null;
+
+    for (const bookmaker of event.bookmakers) {
+        const totalsMarket = bookmaker.markets?.find(m => m.key === 'totals');
+        if (!totalsMarket) continue;
+
+        // Specifically look for Over/Under 2.5
+        const over25 = totalsMarket.outcomes.find(o => o.name === 'Over' && o.point === 2.5);
+        const under25 = totalsMarket.outcomes.find(o => o.name === 'Under' && o.point === 2.5);
+
+        if (over25 && under25) {
+            const overProb = 1 / over25.price;
+            const underProb = 1 / under25.price;
+            const total = overProb + underProb;
+            return {
+                over: Math.round((overProb / total) * 100),
+                under: Math.round((underProb / total) * 100)
+            };
+        }
+    }
     return null;
 }
 

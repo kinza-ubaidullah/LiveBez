@@ -72,6 +72,7 @@ export default function LiveMatchHeader({ matchId, initialData, lang, t }: LiveM
                                 src={match.homeTeamLogo}
                                 alt={match.homeTeam}
                                 fill
+                                sizes="(max-width: 768px) 48px, 96px"
                                 className="object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-110"
                             />
                         ) : (
@@ -118,6 +119,7 @@ export default function LiveMatchHeader({ matchId, initialData, lang, t }: LiveM
                                 src={match.awayTeamLogo}
                                 alt={match.awayTeam}
                                 fill
+                                sizes="(max-width: 768px) 48px, 96px"
                                 className="object-contain p-2 md:p-4 transition-transform duration-500 group-hover:scale-110"
                             />
                         ) : (

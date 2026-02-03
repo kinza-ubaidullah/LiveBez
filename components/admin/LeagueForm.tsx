@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { updateLeagueAction, checkSlugUniqueness } from "@/lib/actions/league-actions";
+import { createLeagueAction } from "@/lib/actions/league-create-action";
 import { useRouter } from "next/navigation";
 import ImageUpload from "./ImageUpload";
-
 
 interface SeoFields {
     title: string;
     description: string;
+    h1: string;
     canonical: string;
     ogTitle: string;
     ogDescription: string;
@@ -27,19 +28,19 @@ interface Translation {
 interface LeagueFormProps {
     league: any;
     languages: any[];
+    isNew?: boolean;
 }
 
-export default function LeagueForm({ league, languages }: LeagueFormProps) {
+export default function LeagueForm({ league, languages, isNew = false }: LeagueFormProps) {
     const router = useRouter();
     const [activeLang, setActiveLang] = useState(languages[0]?.code || 'en');
-    const [country, setCountry] = useState(league.country);
+    const [country, setCountry] = useState(league.country || "");
     const [logoUrl, setLogoUrl] = useState(league.logoUrl || "");
-
 
     const [translations, setTranslations] = useState<Record<string, Translation>>(() => {
         const initial: Record<string, Translation> = {};
         languages.forEach(lang => {
-            const existing = league.translations.find((t: any) => t.languageCode === lang.code);
+            const existing = league.translations?.find((t: any) => t.languageCode === lang.code);
             initial[lang.code] = {
                 languageCode: lang.code,
                 name: existing?.name || "",
@@ -48,6 +49,7 @@ export default function LeagueForm({ league, languages }: LeagueFormProps) {
                 seo: {
                     title: existing?.seo?.title || "",
                     description: existing?.seo?.description || "",
+                    h1: existing?.seo?.h1 || "",
                     canonical: existing?.seo?.canonical || "",
                     ogTitle: existing?.seo?.ogTitle || "",
                     ogDescription: existing?.seo?.ogDescription || "",
@@ -89,7 +91,7 @@ export default function LeagueForm({ league, languages }: LeagueFormProps) {
     const validateSlug = async (slug: string) => {
         if (!slug) return;
         setSlugStatus(prev => ({ ...prev, [activeLang]: 'checking' }));
-        const { isUnique } = await checkSlugUniqueness(slug, league.id);
+        const { isUnique } = await checkSlugUniqueness(slug, league.id || "");
         setSlugStatus(prev => ({ ...prev, [activeLang]: isUnique ? 'unique' : 'taken' }));
     };
 
@@ -98,18 +100,30 @@ export default function LeagueForm({ league, languages }: LeagueFormProps) {
         setLoading(true);
         setMessage(null);
 
-        const result = await updateLeagueAction(league.id, {
-            country,
-            logoUrl,
-            translations: Object.values(translations)
-        });
-
+        let result;
+        if (isNew) {
+            result = await createLeagueAction({
+                country,
+                logoUrl,
+                translations: Object.values(translations)
+            });
+        } else {
+            result = await updateLeagueAction(league.id, {
+                country,
+                logoUrl,
+                translations: Object.values(translations)
+            });
+        }
 
         if (result.success) {
-            setMessage({ type: 'success', text: "League updated successfully!" });
-            router.refresh();
+            setMessage({ type: 'success', text: isNew ? "League created successfully!" : "League updated successfully!" });
+            if (isNew) {
+                router.push("/admin/leagues");
+            } else {
+                router.refresh();
+            }
         } else {
-            setMessage({ type: 'error', text: result.error || "Failed to update league." });
+            setMessage({ type: 'error', text: (result as any).error || "Failed to process league." });
         }
         setLoading(false);
     };
@@ -119,133 +133,150 @@ export default function LeagueForm({ league, languages }: LeagueFormProps) {
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
             {message && (
-                <div className={`p-4 rounded-lg font-bold text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                <div className={`p-4 rounded-xl font-bold text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700 shadow-lg shadow-green-500/10' : 'bg-red-100 text-red-700 shadow-lg shadow-red-500/10'}`}>
                     {message.text}
                 </div>
             )}
 
             {/* Language Tabs */}
-            <div className="flex space-x-2 border-b border-slate-200 pb-px">
+            <div className="flex space-x-2 border-b border-slate-100 pb-px">
                 {languages.map(lang => (
                     <button
                         key={lang.code}
                         type="button"
                         onClick={() => setActiveLang(lang.code)}
-                        className={`px-6 py-3 font-bold text-sm transition-all border-b-2 uppercase tracking-wide ${activeLang === lang.code
-                            ? 'border-blue-600 text-blue-600'
+                        className={`px-8 py-4 font-black text-[10px] transition-all border-b-2 uppercase tracking-widest italic ${activeLang === lang.code
+                            ? 'border-blue-600 text-blue-600 bg-blue-50/50'
                             : 'border-transparent text-slate-400 hover:text-slate-600'
                             }`}
                     >
-                        {lang.name} ({lang.code})
+                        {lang.name}
                     </button>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Info */}
-                <div className="lg:col-span-2 space-y-8">
-                    <div className="premium-card p-8 space-y-6">
-                        <h2 className="text-xl font-black text-slate-900 border-b pb-4">General Content</h2>
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">League Name</label>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+                <div className="lg:col-span-3 space-y-12">
+                    <div className="premium-card p-10 bg-white border-none shadow-sm">
+                        <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
+                            <div className="w-2 h-8 bg-blue-600 rounded-full" />
+                            General Information
+                        </h2>
+
+                        <div className="space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">League Name (Local)</label>
                                 <input
                                     type="text"
                                     value={currentTrans.name}
                                     onChange={(e) => handleTransChange('name', e.target.value)}
-                                    className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
-                                    placeholder="e.g. Premier League"
+                                    className="w-full text-3xl font-black text-slate-900 border-b-2 border-slate-100 focus:border-blue-600 outline-none transition-all py-2 placeholder:text-slate-200"
+                                    placeholder="e.g. English Premier League"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Slug (URL Segment)</label>
-                                    <div className="relative">
+
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Slug / URL Key</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono text-slate-300">/league/</span>
                                         <input
                                             type="text"
                                             value={currentTrans.slug}
                                             onChange={(e) => handleTransChange('slug', e.target.value)}
                                             onBlur={(e) => validateSlug(e.target.value)}
-                                            className={`w-full p-4 rounded-xl border outline-none transition-all font-mono text-sm ${slugStatus[activeLang] === 'unique' ? 'border-green-500 ring-4 ring-green-500/10' :
-                                                slugStatus[activeLang] === 'taken' ? 'border-red-500 ring-4 ring-red-500/10' :
-                                                    'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10'
+                                            className={`flex-1 p-4 rounded-xl border bg-slate-50 font-mono text-xs outline-none transition-all ${slugStatus[activeLang] === 'unique' ? 'border-green-500 bg-green-50' :
+                                                    slugStatus[activeLang] === 'taken' ? 'border-red-500 bg-red-50' :
+                                                        'border-slate-100 focus:border-blue-200'
                                                 }`}
                                             placeholder="premier-league"
                                         />
-                                        {slugStatus[activeLang] === 'checking' && <div className="absolute right-4 top-4 text-xs text-slate-400 animate-pulse">Checking...</div>}
                                     </div>
-                                    {slugStatus[activeLang] === 'taken' && <p className="text-xs text-red-500 font-bold">This slug is already in use.</p>}
+                                    {slugStatus[activeLang] === 'taken' && <p className="text-[8px] text-red-500 font-black uppercase">Collision! URL already taken.</p>}
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Country</label>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Country Foundation</label>
                                     <input
                                         type="text"
                                         value={country}
                                         onChange={(e) => setCountry(e.target.value)}
-                                        className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
+                                        className="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 outline-none focus:border-blue-200 transition-all font-bold"
                                         placeholder="e.g. England"
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Description (Internal/Display)</label>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Internal Description</label>
                                 <textarea
                                     value={currentTrans.description}
                                     onChange={(e) => handleTransChange('description', e.target.value)}
-                                    className="w-full p-4 h-32 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium resize-none"
-                                    placeholder="Brief description of the league..."
+                                    className="w-full p-6 h-40 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-blue-200 transition-all font-medium italic text-slate-600 resize-none"
+                                    placeholder="Admin notes or optional frontend bio..."
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Full SEO Panel */}
-                    <div className="premium-card p-8 space-y-6">
-                        <div className="flex items-center justify-between border-b pb-4">
-                            <h2 className="text-xl font-black text-slate-900 flex items-center">
-                                <svg className="w-5 h-5 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                                SEO & Metadata Override
+                    <div className="premium-card p-10 bg-slate-50 border-none shadow-inner">
+                        <div className="flex items-center justify-between mb-8">
+                            <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                                <div className="w-2 h-8 bg-blue-500 rounded-full" />
+                                SEO Matrix
                             </h2>
-                            <button type="button" className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Manual Control</button>
+                            <div className="px-3 py-1 bg-white rounded-full text-[8px] font-black uppercase tracking-widest text-blue-600 border border-blue-100 shadow-sm">Overridable</div>
                         </div>
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">SEO Meta Title</label>
+
+                        <div className="space-y-8">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Meta Title Override</label>
                                 <input
                                     type="text"
                                     value={currentTrans.seo.title}
                                     onChange={(e) => handleSeoChange('title', e.target.value)}
-                                    className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium"
-                                    placeholder="Search engine optimized title..."
+                                    className="w-full p-4 rounded-xl bg-white border border-slate-100 focus:border-blue-500 outline-none transition-all font-bold text-sm"
+                                    placeholder="Default: [Name] - [Country]"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Meta Description</label>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">SEO H1 Heading</label>
+                                <input
+                                    type="text"
+                                    value={currentTrans.seo.h1}
+                                    onChange={(e) => handleSeoChange('h1', e.target.value)}
+                                    className="w-full p-4 rounded-xl bg-white border border-slate-100 focus:border-blue-500 outline-none transition-all font-bold text-sm"
+                                    placeholder="Custom H1 for the page"
+                                />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Meta Description</label>
                                 <textarea
                                     value={currentTrans.seo.description}
                                     onChange={(e) => handleSeoChange('description', e.target.value)}
-                                    className="w-full p-4 h-24 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium resize-none text-sm"
-                                    placeholder="Compelling search result description..."
+                                    className="w-full p-6 h-32 bg-white border border-slate-100 rounded-2xl outline-none focus:border-blue-500 transition-all font-medium text-slate-600 resize-none"
+                                    placeholder="Craft a compelling search result..."
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">OG Title (Social)</label>
+
+                            <div className="grid grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Social Title (OG)</label>
                                     <input
                                         type="text"
                                         value={currentTrans.seo.ogTitle}
                                         onChange={(e) => handleSeoChange('ogTitle', e.target.value)}
-                                        className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm"
+                                        className="w-full p-4 rounded-xl bg-white border border-slate-100 focus:border-blue-500 outline-none text-xs font-bold"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">OG Image URL</label>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Social Image URL</label>
                                     <input
                                         type="text"
                                         value={currentTrans.seo.ogImage}
                                         onChange={(e) => handleSeoChange('ogImage', e.target.value)}
-                                        className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 outline-none transition-all text-sm font-mono"
-                                        placeholder="https://..."
+                                        className="w-full p-4 rounded-xl bg-white border border-slate-100 focus:border-blue-500 outline-none text-[10px] font-mono"
                                     />
                                 </div>
                             </div>
@@ -253,50 +284,50 @@ export default function LeagueForm({ league, languages }: LeagueFormProps) {
                     </div>
                 </div>
 
-                {/* Sidebar Controls */}
-                <div className="space-y-8">
-                    <div className="premium-card p-8 bg-white space-y-4">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">League Logo</h4>
-                        <ImageUpload
-                            value={logoUrl}
-                            onChange={(url) => setLogoUrl(url)}
-                        />
-                    </div>
+                <div className="space-y-12">
+                    <div className="premium-card p-10 bg-slate-900 border-none sticky top-36 shadow-2xl">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-1.5 h-6 bg-blue-500" />
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Publishing Control</h4>
+                        </div>
 
-                    <div className="premium-card p-8 bg-blue-600 text-white">
-
-                        <h3 className="text-lg font-black uppercase tracking-widest mb-4">Publish Settings</h3>
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase tracking-widest text-blue-200">Index in Search</span>
-                                <input
-                                    type="checkbox"
-                                    checked={!currentTrans.seo.noIndex}
-                                    onChange={(e) => handleSeoChange('noIndex', !e.target.checked)}
-                                    className="w-6 h-6 rounded-lg text-white bg-blue-700 border-none focus:ring-0 checked:bg-green-400"
-                                />
+                        <div className="space-y-8">
+                            <div className="space-y-6">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Official Logo</label>
+                                <ImageUpload value={logoUrl} onChange={setLogoUrl} />
                             </div>
-                            <div className="pt-6 border-t border-blue-500/50">
-                                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-4 italic">Unsaved changes detected</p>
-                                <button
-                                    disabled={loading}
-                                    className="w-full bg-white text-blue-600 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/20 disabled:opacity-50"
+
+                            <div className="flex items-center justify-between pt-6 border-t border-slate-800">
+                                <div className="space-y-1">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-white">Search Index</div>
+                                    <div className="text-[8px] text-slate-500">Allow Google bot access</div>
+                                </div>
+                                <div
+                                    onClick={() => handleSeoChange('noIndex', !currentTrans.seo.noIndex)}
+                                    className={`w-12 h-6 rounded-full relative cursor-pointer transition-all ${!currentTrans.seo.noIndex ? 'bg-emerald-500' : 'bg-slate-700'}`}
                                 >
-                                    {loading ? 'Saving...' : 'Save All Changes'}
-                                </button>
+                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${!currentTrans.seo.noIndex ? 'right-1' : 'left-1'}`} />
+                                </div>
                             </div>
+
+                            <button
+                                disabled={loading}
+                                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest italic text-xs transition-all shadow-xl shadow-blue-500/20 disabled:opacity-50"
+                            >
+                                {loading ? "Syncing Logic..." : isNew ? "Create Competition" : "Finalize Changes"}
+                            </button>
                         </div>
                     </div>
 
-                    <div className="premium-card p-8 space-y-4">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Advanced</h4>
+                    <div className="premium-card p-8 bg-blue-50 border-none">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-4">Advanced Canonicals</h4>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase">Canonical URL Override</label>
                             <input
                                 type="text"
                                 value={currentTrans.seo.canonical}
                                 onChange={(e) => handleSeoChange('canonical', e.target.value)}
-                                className="w-full p-3 rounded-lg border border-slate-100 bg-slate-50 text-xs font-mono"
+                                className="w-full p-4 bg-white/50 border border-blue-100 rounded-xl text-[10px] font-mono focus:bg-white outline-none"
+                                placeholder="https://external-source.com/..."
                             />
                         </div>
                     </div>

@@ -21,6 +21,11 @@ interface PredictionCardProps {
                 slug: string;
             }>;
         } | string | null;
+        prediction?: {
+            winProbHome: number;
+            winProbDraw: number;
+            winProbAway: number;
+        } | null;
         translations: Array<{
             slug: string;
             name: string;
@@ -51,7 +56,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                         <div className="flex-1 flex flex-col items-center gap-2 md:gap-4 group/team min-w-0">
                             <div className="relative w-16 h-16 md:w-24 md:h-24 bg-white dark:bg-slate-950 rounded-2xl md:rounded-[2rem] shadow-xl md:shadow-2xl flex items-center justify-center p-2 md:p-4 border border-white/10 group-hover/team:scale-110 transition-transform duration-500">
                                 {match.homeTeamLogo ? (
-                                    <Image src={match.homeTeamLogo} alt={match.homeTeam} fill className="object-contain p-2 md:p-4" />
+                                    <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" />
                                 ) : <div className="text-2xl md:text-4xl font-black text-slate-200">?</div>}
                             </div>
                             <span className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest text-center truncate w-full">{match.homeTeam}</span>
@@ -69,7 +74,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                         <div className="flex-1 flex flex-col items-center gap-2 md:gap-4 group/team min-w-0">
                             <div className="relative w-16 h-16 md:w-24 md:h-24 bg-white dark:bg-slate-950 rounded-2xl md:rounded-[2rem] shadow-xl md:shadow-2xl flex items-center justify-center p-2 md:p-4 border border-white/10 group-hover/team:scale-110 transition-transform duration-500">
                                 {match.awayTeamLogo ? (
-                                    <Image src={match.awayTeamLogo} alt={match.awayTeam} fill className="object-contain p-2 md:p-4" />
+                                    <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" />
                                 ) : <div className="text-2xl md:text-4xl font-black text-slate-200">?</div>}
                             </div>
                             <span className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest text-center truncate w-full">{match.awayTeam}</span>
@@ -101,6 +106,24 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                             <Info className="w-4 h-4" />
                             Analysis
                         </Link>
+
+                        {/* Odds / Probabilities Display */}
+                        {match.prediction && (
+                            <div className="flex items-center gap-2 md:gap-4 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="flex flex-col items-center px-2 md:px-3 border-r border-slate-200 dark:border-slate-800">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase">Home</span>
+                                    <span className="text-[10px] md:text-xs font-black text-slate-900 dark:text-white">{Math.round(match.prediction.winProbHome)}%</span>
+                                </div>
+                                <div className="flex flex-col items-center px-2 md:px-3 border-r border-slate-200 dark:border-slate-800">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase">Draw</span>
+                                    <span className="text-[10px] md:text-xs font-black text-slate-900 dark:text-white">{Math.round(match.prediction.winProbDraw)}%</span>
+                                </div>
+                                <div className="flex flex-col items-center px-2 md:px-3">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase">Away</span>
+                                    <span className="text-[10px] md:text-xs font-black text-slate-900 dark:text-white">{Math.round(match.prediction.winProbAway)}%</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="ml-auto flex items-center gap-4">
                             <div className="flex flex-col items-end">

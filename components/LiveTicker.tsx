@@ -13,12 +13,7 @@ interface LiveMatch {
 }
 
 // Fallback mock data when API is unavailable
-const mockLiveMatches: LiveMatch[] = [
-    { id: '1', homeTeam: 'Chelsea', awayTeam: 'Arsenal', homeScore: 1, awayScore: 1, time: "65'", status: 'LIVE' },
-    { id: '2', homeTeam: 'Real Madrid', awayTeam: 'Barcelona', homeScore: 2, awayScore: 0, time: "HT", status: 'HALFTIME' },
-    { id: '3', homeTeam: 'Liverpool', awayTeam: 'Man City', homeScore: 0, awayScore: 0, time: "12'", status: 'LIVE' },
-    { id: '4', homeTeam: 'PSG', awayTeam: 'Marseille', homeScore: 3, awayScore: 1, time: "88'", status: 'LIVE' },
-];
+const mockLiveMatches: LiveMatch[] = [];
 
 export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
     const [matches, setMatches] = useState<LiveMatch[]>(mockLiveMatches);
@@ -38,18 +33,17 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
                         homeScore: game.homeScore,
                         awayScore: game.awayScore,
                         time: game.time,
-                        status: game.status,
+                        status: 'LIVE',
                     }));
                     setMatches(liveMatches);
                     setIsLive(true);
                 } else {
-                    // If no live matches, show featured/upcoming matches from mock
-                    setMatches(mockLiveMatches.map(m => ({ ...m, status: 'SCHEDULED' as const, time: 'Featured' })));
+                    setMatches([]);
                     setIsLive(false);
                 }
             } catch (err) {
-                console.warn('Failed to fetch live scores, using mock data');
-                setMatches(mockLiveMatches.map(m => ({ ...m, status: 'SCHEDULED' as const, time: 'Featured' })));
+                console.warn('Failed to fetch live scores');
+                setMatches([]);
                 setIsLive(false);
             }
         };
@@ -72,6 +66,8 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
         return match.time;
     };
 
+    if (matches.length === 0) return null;
+
     return (
         <div className="bg-slate-950 text-white w-full overflow-hidden border-b border-white/5 py-4 relative group">
             <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-10" />
@@ -83,9 +79,9 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
                     <div key={i} className="flex items-center gap-6 group/item cursor-default transition-all duration-300">
                         <div className="flex items-center gap-3">
                             <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border ${match.status === 'LIVE' ? 'bg-red-600/10 border-red-500/50 text-red-500 animate-pulse' :
-                                    match.status === 'HALFTIME' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
-                                        match.status === 'SCHEDULED' ? 'bg-blue-600/10 border-blue-500/50 text-blue-500' :
-                                            'bg-slate-800 border-slate-700 text-slate-400'
+                                match.status === 'HALFTIME' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
+                                    match.status === 'SCHEDULED' ? 'bg-blue-600/10 border-blue-500/50 text-blue-500' :
+                                        'bg-slate-800 border-slate-700 text-slate-400'
                                 }`}>
                                 {match.status === 'SCHEDULED' ? 'Featured' : translateTime(match)}
                             </span>

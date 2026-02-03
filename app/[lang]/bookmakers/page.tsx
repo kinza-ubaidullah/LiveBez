@@ -52,7 +52,9 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
                                                 src={bm.logoUrl}
                                                 alt={trans.name}
                                                 fill
+                                                sizes="80px"
                                                 className="object-contain p-3"
+                                                unoptimized={bm.logoUrl.endsWith('.png') || bm.logoUrl.endsWith('.svg')}
                                             />
                                         ) : (
                                             <span className="text-2xl font-black text-slate-300 dark:text-slate-600">
@@ -88,14 +90,15 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
 
                                 {/* CTA */}
                                 <div className="w-full lg:w-auto">
-                                    <Link
+                                    <a
                                         href={trans.affiliateUrl || "#"}
                                         target="_blank"
+                                        rel="noopener noreferrer"
                                         className="flex items-center justify-center gap-2 w-full lg:w-48 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
                                     >
                                         Claim Bonus
                                         <ExternalLink className="w-4 h-4" />
-                                    </Link>
+                                    </a>
                                     <p className="mt-2 text-[10px] text-center text-slate-400 font-medium">
                                         T&Cs Apply. 18+
                                     </p>

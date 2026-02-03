@@ -10,20 +10,16 @@ import ShareButtons from "@/components/ShareButtons";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string, articleSlug: string }> }) {
     const { lang, articleSlug } = await params;
 
-    // Find article by any slug, then get the translation for the requested language
-    const slugTrans = await prisma.articleTranslation.findUnique({
+    // Strict lookup: Slug must exist and belong to the requested language
+    const articleTrans = await prisma.articleTranslation.findUnique({
         where: { slug: articleSlug },
-        select: { articleId: true }
-    });
-
-    if (!slugTrans) return {};
-
-    const articleTrans = await prisma.articleTranslation.findFirst({
-        where: { articleId: slugTrans.articleId, languageCode: lang },
         include: { seo: true }
     });
 
-    if (!articleTrans) return {};
+    if (!articleTrans || articleTrans.languageCode !== lang) {
+        return { title: "Article Not Found | LiveBaz" };
+    }
+
     return generatePageMetadata(articleTrans.seo);
 }
 
@@ -31,18 +27,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ lang: 
     const { lang, articleSlug } = await params;
     const t = getDictionary(lang);
 
-    // First, find the article by any slug
-    const slugTrans = await prisma.articleTranslation.findUnique({
+    // 1. Find the article translation by exact slug
+    const articleTrans = await prisma.articleTranslation.findUnique({
         where: { slug: articleSlug },
-        select: { articleId: true }
-    });
-
-    if (!slugTrans) notFound();
-
-    // Then, get the translation for the current language
-    const articleTrans = await prisma.articleTranslation.findFirst({
-        where: { articleId: slugTrans.articleId, languageCode: lang },
         include: {
+            seo: true,
             article: {
                 include: {
                     category: {
@@ -51,31 +40,18 @@ export default async function ArticlePage({ params }: { params: Promise<{ lang: 
                         }
                     }
                 }
-            } as any,
-            seo: true
+            }
         }
     });
 
-    // If no translation exists for this language, fall back to the original
-    const finalTrans = articleTrans || await prisma.articleTranslation.findUnique({
-        where: { slug: articleSlug },
-        include: {
-            article: {
-                include: {
-                    category: {
-                        include: {
-                            translations: { where: { languageCode: 'en' } }
-                        }
-                    }
-                }
-            } as any,
-            seo: true
-        }
-    });
+    // 2. Strict Check: If it doesn't belong to the requested language, we 404.
+    // This enforces the "Incomplete language versions should not be visible" rule.
+    if (!articleTrans || articleTrans.languageCode !== lang) {
+        notFound();
+    }
 
-    if (!finalTrans) notFound();
-
-    const article = (finalTrans as any).article;
+    const finalTrans = articleTrans;
+    const article: any = articleTrans.article;
     const categoryName = article.category?.translations[0]?.name || article.category?.key || 'Sports';
 
     // Structured Data (JSON-LD)

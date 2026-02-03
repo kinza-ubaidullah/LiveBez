@@ -31,7 +31,10 @@ export default async function PredictionsPage({
         } else if (type === 'over-under') {
             where.mainTip = { contains: 'Over' };
         } else if (type === 'btts') {
-            where.mainTip = { contains: 'BTTS' };
+            where.OR = [
+                { mainTip: { contains: 'BTTS' } },
+                { mainTip: 'Analysis Pending' }
+            ];
         } else if (type === 'top') {
             where.confidence = { gte: 85 };
         } else if (type === 'banker') {

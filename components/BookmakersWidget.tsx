@@ -44,28 +44,29 @@ export default async function BookmakersWidget({ lang }: BookmakersWidgetProps) 
 
                     return (
                         <div key={bm.id} className="group relative">
-                            <Link
+                            <a
                                 href={trans.affiliateUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 border border-slate-50 dark:border-slate-800 rounded-3xl p-6 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1"
+                                className="block bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 border border-slate-50 dark:border-slate-800 rounded-3xl p-6 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-1 cursor-pointer"
                             >
                                 <div className="flex items-center gap-5 mb-6">
-                                    {bm.logoUrl ? (
-                                        <div className="w-16 h-16 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center p-3 flex-shrink-0 border border-slate-100 dark:border-slate-600 shadow-sm transition-transform group-hover:scale-105">
+                                    <div className="w-16 h-16 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center p-3 flex-shrink-0 border border-slate-100 dark:border-slate-600 shadow-sm transition-transform group-hover:scale-105">
+                                        {bm.logoUrl ? (
                                             <Image
                                                 src={bm.logoUrl}
                                                 alt={trans.name}
                                                 width={60}
                                                 height={60}
                                                 className="object-contain"
+                                                unoptimized={bm.logoUrl.endsWith('.png') || bm.logoUrl.endsWith('.svg')}
                                             />
-                                        </div>
-                                    ) : (
-                                        <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600 font-black text-xl border border-blue-600/20">
-                                            {trans.name.charAt(0)}
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-blue-600 font-black text-xl">
+                                                {trans.name.charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">
                                             <div className="text-slate-900 dark:text-white font-black uppercase text-xs tracking-tight italic truncate">{trans.name}</div>
@@ -78,10 +79,10 @@ export default async function BookmakersWidget({ lang }: BookmakersWidgetProps) 
                                         </div>
                                     </div>
                                 </div>
-                                <div className="w-full py-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-2xl text-center border border-slate-100 dark:border-slate-700 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all duration-300">
+                                <div className="w-full py-4 bg-blue-600 text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-2xl text-center shadow-lg shadow-blue-500/20 group-hover:bg-blue-700 transition-all duration-300">
                                     {t.bookmakers?.visit || "Visit Site"}
                                 </div>
-                            </Link>
+                            </a>
                         </div>
                     );
                 })}

@@ -36,7 +36,8 @@ export default async function LocaleLayout({
             }) || Promise.resolve([])
         ]);
         settings = settingsRes;
-        languages = languagesRes;
+        // Exclude Urdu ('ur') as requested by user
+        languages = (languagesRes || []).filter((l: any) => l.code !== 'ur');
     } catch (error) {
         console.error("Prisma lookup failed in layout.tsx:", error);
     }

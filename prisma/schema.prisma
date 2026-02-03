@@ -8,226 +8,201 @@ datasource db {
 }
 
 model Language {
-  id        String   @id @default(cuid())
-  code      String   @unique // e.g., 'en', 'es'
-  name      String
-  isVisible Boolean  @default(true) // Controls if available in switcher
-  isSource  Boolean  @default(false) // Primary data source language
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id                     String                       @id @default(cuid())
+  code                   String                       @unique
+  name                   String
+  isVisible              Boolean                      @default(true)
+  isSource               Boolean                      @default(false)
+  createdAt              DateTime                     @default(now())
+  updatedAt              DateTime                     @updatedAt
+  categoryTranslations   ArticleCategoryTranslation[]
+  articleTranslations    ArticleTranslation[]
+  bookmakerTranslations  BookmakerTranslation[]
   leagueTranslations     LeagueTranslation[]
   matchTranslations      MatchTranslation[]
   predictionTranslations PredictionTranslation[]
-  articleTranslations    ArticleTranslation[]
-  bookmakerTranslations  BookmakerTranslation[]
-  categoryTranslations   ArticleCategoryTranslation[]
 }
 
 model SiteSettings {
-  id             String  @id @default(cuid())
-  siteName       String  @default("LiveBaz")
-  defaultLocale  String  @default("en")
-  
-  // Global SEO Default Fallbacks
-  globalTitle    String? 
-  globalDesc     String?
-  globalBrandColor String @default("#2563eb")
-  
-  // Script Injections
-  headScripts    String?
-  bodyScripts    String?
-  
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(cuid())
+  siteName         String   @default("LiveBaz")
+  defaultLocale    String   @default("en")
+  globalTitle      String?
+  globalDesc       String?
+  globalBrandColor String   @default("#2563eb")
+  headScripts      String?
+  bodyScripts      String?
+  updatedAt        DateTime @updatedAt
 }
 
 model SeoFields {
-  id             String  @id @default(cuid())
-  title          String?
-  description    String?
-  h1             String? // Explicit H1 override
-  canonical      String?
-  ogTitle        String?
-  ogDescription  String?
-  ogImage        String?
-  noIndex        Boolean @default(false)
-  jsonLd         String? // Custom structured data JSON
-
-  // One-to-one relations with other entities (at translation level)
-  leagueTranslation     LeagueTranslation?
-  matchTranslation      MatchTranslation?
-  articleTranslation    ArticleTranslation?
-  categoryTranslation   ArticleCategoryTranslation?
+  id                  String                      @id @default(cuid())
+  title               String?
+  description         String?
+  h1                  String?
+  canonical           String?
+  ogTitle             String?
+  ogDescription       String?
+  ogImage             String?
+  noIndex             Boolean                     @default(false)
+  jsonLd              String?
+  categoryTranslation ArticleCategoryTranslation?
+  articleTranslation  ArticleTranslation?
+  leagueTranslation   LeagueTranslation?
+  matchTranslation    MatchTranslation?
 }
 
 model League {
-  id        String   @id @default(cuid())
-  apiId     String?  @unique // Link to API-Sports ID
-  country   String
-  logoUrl   String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  matches      Match[]
+  id           String              @id @default(cuid())
+  apiId        String?             @unique
+  country      String
+  logoUrl      String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
   translations LeagueTranslation[]
+  matches      Match[]
 }
 
 model LeagueTranslation {
-  id          String   @id @default(cuid())
-  leagueId    String
+  id           String    @id @default(cuid())
+  leagueId     String
   languageCode String
-  slug        String   @unique
-  name        String
-  description String?
-  isActive    Boolean  @default(true) // Controls if this specific league/lang is public
-
-  league    League    @relation(fields: [leagueId], references: [id])
-  language  Language  @relation(fields: [languageCode], references: [code])
-  
-  seoId     String    @unique
-  seo       SeoFields @relation(fields: [seoId], references: [id])
+  slug         String    @unique
+  name         String
+  description  String?
+  isActive     Boolean   @default(true)
+  seoId        String    @unique
+  language     Language  @relation(fields: [languageCode], references: [code])
+  league       League    @relation(fields: [leagueId], references: [id])
+  seo          SeoFields @relation(fields: [seoId], references: [id])
 
   @@unique([leagueId, languageCode])
 }
 
 model Match {
-  id          String   @id @default(cuid())
-  date        DateTime
-  homeTeam    String
-  awayTeam    String
-  homeScore   Int?
-  awayScore   Int?
-  leagueId    String
-  status      String   @default("SCHEDULED")
-  
-  minute      Int?    
-  apiSportsId String? 
-  lineups     String? 
-  stats       String? 
-  homeTeamLogo String? 
-  awayTeamLogo String? 
-  
-  mainTip       String? 
-  confidence    Int?    
-  isFeatured    Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  league    League    @relation(fields: [leagueId], references: [id])
-  
-  prediction   Prediction?
+  id           String             @id @default(cuid())
+  date         DateTime
+  homeTeam     String
+  awayTeam     String
+  homeScore    Int?
+  awayScore    Int?
+  leagueId     String
+  status       String             @default("SCHEDULED")
+  minute       Int?
+  apiSportsId  String?
+  lineups      String?
+  stats        String?
+  homeTeamLogo String?
+  awayTeamLogo String?
+  mainTip      String?
+  confidence   Int?
+  isFeatured   Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  league       League             @relation(fields: [leagueId], references: [id])
   translations MatchTranslation[]
+  prediction   Prediction?
 }
 
 model MatchTranslation {
-  id          String   @id @default(cuid())
-  matchId     String
+  id           String    @id @default(cuid())
+  matchId      String
   languageCode String
-  slug        String   @unique
-  name        String 
-  content     String? 
-  analysis    String? 
-  isActive    Boolean  @default(true)
-
-  match     Match     @relation(fields: [matchId], references: [id])
-  language  Language  @relation(fields: [languageCode], references: [code])
-  
-  seoId     String    @unique
-  seo       SeoFields @relation(fields: [seoId], references: [id])
+  slug         String    @unique
+  name         String
+  content      String?
+  analysis     String?
+  isActive     Boolean   @default(true)
+  seoId        String    @unique
+  language     Language  @relation(fields: [languageCode], references: [code])
+  match        Match     @relation(fields: [matchId], references: [id])
+  seo          SeoFields @relation(fields: [seoId], references: [id])
 
   @@unique([matchId, languageCode])
 }
 
 model Prediction {
-  id             String   @id @default(cuid())
-  matchId        String   @unique
-  winProbHome    Float
-  winProbAway    Float
-  winProbDraw    Float
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  match        Match       @relation(fields: [matchId], references: [id])
+  id           String                  @id @default(cuid())
+  matchId      String                  @unique
+  winProbHome  Float
+  winProbAway  Float
+  winProbDraw  Float
+  bttsProb     Float?                  @default(50)
+  overProb     Float?                  @default(50)
+  underProb    Float?                  @default(50)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  match        Match                   @relation(fields: [matchId], references: [id])
   translations PredictionTranslation[]
 }
 
 model PredictionTranslation {
-  id             String   @id @default(cuid())
-  predictionId   String
-  languageCode   String
-  analysis       String 
-
-  prediction Prediction @relation(fields: [predictionId], references: [id])
-  language   Language   @relation(fields: [languageCode], references: [code])
+  id           String     @id @default(cuid())
+  predictionId String
+  languageCode String
+  analysis     String
+  language     Language   @relation(fields: [languageCode], references: [code])
+  prediction   Prediction @relation(fields: [predictionId], references: [id])
 
   @@unique([predictionId, languageCode])
 }
 
 model Article {
-  id            String   @id @default(cuid())
+  id            String               @id @default(cuid())
   categoryId    String
-  published     Boolean  @default(false)
-  featuredImage String?  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  category     ArticleCategory      @relation(fields: [categoryId], references: [id])
-  translations ArticleTranslation[]
-  tags         Tag[]
+  published     Boolean              @default(false)
+  featuredImage String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  category      ArticleCategory      @relation(fields: [categoryId], references: [id])
+  translations  ArticleTranslation[]
+  tags          Tag[]                @relation("ArticleToTag")
 }
 
 model ArticleCategory {
-  id        String   @id @default(cuid())
-  key       String   @unique // Internal key, e.g., 'news'
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id           String                       @id @default(cuid())
+  key          String                       @unique
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
   articles     Article[]
   translations ArticleCategoryTranslation[]
 }
 
 model ArticleCategoryTranslation {
-  id          String   @id @default(cuid())
-  categoryId  String
+  id           String          @id @default(cuid())
+  categoryId   String
   languageCode String
-  slug        String   @unique
-  name        String
-  description String?
-
-  category  ArticleCategory @relation(fields: [categoryId], references: [id])
-  language  Language        @relation(fields: [languageCode], references: [code])
-  
-  seoId     String    @unique
-  seo       SeoFields @relation(fields: [seoId], references: [id])
+  slug         String          @unique
+  name         String
+  description  String?
+  seoId        String          @unique
+  category     ArticleCategory @relation(fields: [categoryId], references: [id])
+  language     Language        @relation(fields: [languageCode], references: [code])
+  seo          SeoFields       @relation(fields: [seoId], references: [id])
 
   @@unique([categoryId, languageCode])
 }
 
 model Tag {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  articles    Article[]
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  articles Article[] @relation("ArticleToTag")
 }
 
 model ArticleTranslation {
-  id          String   @id @default(cuid())
-  articleId   String
+  id           String    @id @default(cuid())
+  articleId    String
   languageCode String
-  slug        String   @unique
-  title       String
-  content     String   
-  excerpt     String?
-  isActive    Boolean  @default(true)
-
-  article   Article   @relation(fields: [articleId], references: [id])
-  language  Language  @relation(fields: [languageCode], references: [code])
-  
-  seoId     String    @unique
-  seo       SeoFields @relation(fields: [seoId], references: [id])
+  slug         String    @unique
+  title        String
+  content      String
+  excerpt      String?
+  isActive     Boolean   @default(true)
+  seoId        String    @unique
+  article      Article   @relation(fields: [articleId], references: [id])
+  language     Language  @relation(fields: [languageCode], references: [code])
+  seo          SeoFields @relation(fields: [seoId], references: [id])
 
   @@unique([articleId, languageCode])
 }
@@ -243,25 +218,41 @@ model AdminUser {
 }
 
 model Bookmaker {
-  id          String   @id @default(cuid())
-  logoUrl     String?  
-  rating      Float    @default(5.0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id           String                 @id @default(cuid())
+  logoUrl      String?
+  rating       Float                  @default(5.0)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
   translations BookmakerTranslation[]
 }
 
 model BookmakerTranslation {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   bookmakerId  String
   languageCode String
   name         String
   bonusText    String
   affiliateUrl String
-
-  bookmaker Bookmaker @relation(fields: [bookmakerId], references: [id])
-  language  Language  @relation(fields: [languageCode], references: [code])
+  bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id])
+  language     Language  @relation(fields: [languageCode], references: [code])
 
   @@unique([bookmakerId, languageCode])
+}
+
+model SyncLog {
+  id        String   @id @default(cuid())
+  type      String   // 'Fixtures', 'Odds', 'Live'
+  status    String   // 'SUCCESS', 'FAILED'
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String?  // Optional: link to a user
+  matchId   String?  // Optional: link to a specific match subscription
+  createdAt DateTime @default(now())
 }

@@ -25,16 +25,35 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     };
 }
 
-export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
+import { apiSports } from "@/lib/sports-api";
+
+// ... previous imports
+
+export default async function Home({
+    params,
+    searchParams
+}: {
+    params: Promise<{ lang: string }>,
+    searchParams: Promise<{ day?: string }>
+}) {
     const { lang } = await params;
+    const { day = 'today' } = await searchParams;
     const t = getDictionary(lang);
 
     let leagues: any[] = [];
     let featuredArticles: any[] = [];
     let matches: any[] = [];
 
+    // Calculate dates
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const targetDate = day === 'tomorrow' ? tomorrow : today;
+    const dateString = targetDate.toISOString().split('T')[0];
+
     try {
-        const [leaguesRes, articlesRes, matchesRes] = await Promise.all([
+        const [leaguesRes, articlesRes] = await Promise.all([
             prisma.league?.findMany({
                 where: { translations: { some: { languageCode: lang } } },
                 include: { translations: { where: { languageCode: lang } } }
@@ -45,24 +64,76 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 take: 4,
                 orderBy: { createdAt: 'desc' }
             }) || Promise.resolve([]),
-            prisma.match?.findMany({
-                where: { translations: { some: { languageCode: lang } } },
-                include: {
-                    translations: { where: { languageCode: lang } },
-                    prediction: true,
-                    league: {
-                        include: {
-                            translations: { where: { languageCode: lang } }
-                        }
-                    }
-                },
-                take: 8,
-                orderBy: { date: 'asc' }
-            }) || Promise.resolve([])
         ]);
+
         leagues = leaguesRes;
         featuredArticles = articlesRes;
-        matches = matchesRes;
+
+        // Fetch Matches for the target day
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        matches = await prisma.match?.findMany({
+            where: {
+                date: { gte: startOfDay, lte: endOfDay },
+                translations: { some: { languageCode: lang } }
+            },
+            include: {
+                translations: { where: { languageCode: lang } },
+                prediction: true,
+                league: {
+                    include: {
+                        translations: { where: { languageCode: lang } }
+                    }
+                }
+            },
+            orderBy: { date: 'asc' }
+        }) || [];
+
+        // --- Automatic Background Sync Logic (Only for Today) ---
+        if (day === 'today') {
+            const lastSync = await (prisma as any).syncLog?.findFirst({
+                where: { type: 'Matches' },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+            if (matches.length === 0 || !lastSync || lastSync.createdAt < thirtyMinsAgo) {
+                console.log("🔄 Auto-syncing projections in background...");
+                fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4005'}/api/sync/matches`).catch(e => { });
+            }
+        }
+
+        // Fallback: Fetch from API if DB is empty for this day
+        if (matches.length === 0) {
+            console.log(`⚠️ DB empty for ${day}, fetching from API...`);
+            const apiMatches = await apiSports.getLiveScores({ date: dateString });
+
+            matches = apiMatches.map((m: any) => ({
+                id: m.fixture.id.toString(),
+                homeTeam: m.teams.home.name,
+                homeTeamLogo: m.teams.home.logo,
+                awayTeam: m.teams.away.name,
+                awayTeamLogo: m.teams.away.logo,
+                date: m.fixture.date,
+                status: m.fixture.status.short,
+                mainTip: "Analysis Pending",
+                league: {
+                    translations: [{
+                        name: m.league.name,
+                        slug: m.league.name.toLowerCase().replace(/ /g, '-')
+                    }]
+                },
+                translations: [{
+                    slug: `${m.fixture.id}-${m.teams.home.name}-vs-${m.teams.away.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                    name: `${m.teams.home.name} vs ${m.teams.away.name}`
+                }]
+            }));
+        }
+
     } catch (e) {
         console.error("Home page data fetch failed:", e);
     }
@@ -77,7 +148,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
                     {/* Column 1: Left Sidebar (League Nav) */}
                     <div className="hidden xl:block xl:col-span-3">
-                        <LeaguesSidebar lang={lang} />
+                        <LeaguesSidebar lang={lang} leagues={leagues} />
                     </div>
 
                     {/* Column 2: Main Content (Predictions & Featured) */}
@@ -88,6 +159,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                                 src="/images/hero-bg.png"
                                 alt="Premium Sports Hub"
                                 fill
+                                sizes="100vw"
                                 className="object-cover transition-transform duration-1000 group-hover:scale-105"
                                 priority
                             />
@@ -131,8 +203,18 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <button className="px-5 py-2.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-600/20">Today</button>
-                                <button className="px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:border-blue-600 hover:text-blue-600">Tomorrow</button>
+                                <Link
+                                    href={`/${lang}?day=today`}
+                                    className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${day === 'today' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:border-blue-600 hover:text-blue-600'}`}
+                                >
+                                    Today
+                                </Link>
+                                <Link
+                                    href={`/${lang}?day=tomorrow`}
+                                    className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${day === 'tomorrow' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:border-blue-600 hover:text-blue-600'}`}
+                                >
+                                    Tomorrow
+                                </Link>
                             </div>
 
                             <div className="grid grid-cols-1 gap-8">
@@ -153,37 +235,53 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                     <aside className="xl:col-span-3 space-y-12">
                         <BookmakersWidget lang={lang} />
 
-                        {/* Expert Insights - Simplified & Human Ready */}
+                        {/* Featured Headlines - Real Data from DB */}
                         <div className="portal-card p-8 space-y-8 bg-white dark:bg-slate-950 border-t-4 border-blue-600">
                             <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-6">
                                 <div className="flex items-center gap-3">
-                                    <Crown className="w-5 h-5 text-blue-600" />
-                                    <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Platform Top Experts</h4>
+                                    <Trophy className="w-5 h-5 text-blue-600" />
+                                    <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Featured Headlines</h4>
                                 </div>
                             </div>
                             <div className="space-y-6">
-                                {[
-                                    { name: "Pro Analyst 01", win: "88%", profit: "+4.2k", trend: "up" },
-                                    { name: "Market Shark", win: "82%", profit: "+3.1k", trend: "up" },
-                                ].map((expert, i) => (
-                                    <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-transparent hover:border-blue-600/20 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-lg shadow-blue-600/20">
-                                                {expert.name[0]}
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-tight">{expert.name}</div>
-                                                <div className="text-[8px] font-bold text-blue-600 uppercase mt-0.5">{expert.win} Success Rate</div>
+                                {featuredArticles.length > 0 ? (
+                                    featuredArticles.map((article: any, i) => (
+                                        <div key={i} className="group relative">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-900 overflow-hidden flex-shrink-0 relative">
+                                                    {article.featuredImage ? (
+                                                        <Image
+                                                            src={article.featuredImage}
+                                                            alt={article.translations[0]?.title}
+                                                            fill
+                                                            sizes="48px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-300 font-black text-xs">NL</div>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-[8px] font-black text-blue-600 uppercase tracking-widest">
+                                                        {new Date(article.createdAt).toLocaleDateString(lang, { month: 'short', day: 'numeric' })}
+                                                    </div>
+                                                    <h5 className="text-[10px] font-black text-slate-900 dark:text-white uppercase leading-tight group-hover:text-blue-600 transition-colors">
+                                                        <Link href={`/${lang}/blog/${article.translations[0]?.slug}`}>
+                                                            {article.translations[0]?.title}
+                                                        </Link>
+                                                    </h5>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">{expert.profit}</div>
-                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Stay tuned for news...
                                     </div>
-                                ))}
+                                )}
                             </div>
-                            <Link href={`/${lang}/predictions`} className="block w-full text-center py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-950 transition-all">
-                                View Full Analysis
+                            <Link href={`/${lang}/blog`} className="block w-full text-center py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-950 transition-all">
+                                View Full Blog
                             </Link>
                         </div>
                     </aside>

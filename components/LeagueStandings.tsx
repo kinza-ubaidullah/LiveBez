@@ -45,37 +45,44 @@ export default function LeagueStandings({ standings, t }: LeagueStandingsProps) 
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {standings.map((team) => (
-                            <tr key={team.team.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                                <td className="px-4 py-3 text-center font-medium text-slate-500">
-                                    {team.rank}
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative w-6 h-6 flex-shrink-0">
-                                            <Image
-                                                src={team.team.logo}
-                                                alt={team.team.name}
-                                                fill
-                                                className="object-contain"
-                                            />
+                        {standings.map((team, index) => {
+                            if (!team?.team) return null;
+                            return (
+                                <tr key={team.team.id || index} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                                    <td className="px-4 py-3 text-center font-medium text-slate-500">
+                                        {team.rank}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-6 h-6 flex-shrink-0">
+                                                {team.team.logo ? (
+                                                    <Image
+                                                        src={team.team.logo}
+                                                        alt={team.team.name}
+                                                        fill
+                                                        className="object-contain"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gray-200 rounded-full" />
+                                                )}
+                                            </div>
+                                            <span className="font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
+                                                {team.team.name}
+                                            </span>
                                         </div>
-                                        <span className="font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
-                                            {team.team.name}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400 tabular-nums">
-                                    {team.all.played}
-                                </td>
-                                <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400 tabular-nums">
-                                    {team.goalsDiff > 0 ? `+${team.goalsDiff}` : team.goalsDiff}
-                                </td>
-                                <td className="px-4 py-3 text-center font-black text-primary tabular-nums text-base">
-                                    {team.points}
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400 tabular-nums">
+                                        {team.all.played}
+                                    </td>
+                                    <td className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400 tabular-nums">
+                                        {team.goalsDiff > 0 ? `+${team.goalsDiff}` : team.goalsDiff}
+                                    </td>
+                                    <td className="px-4 py-3 text-center font-black text-primary tabular-nums text-base">
+                                        {team.points}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

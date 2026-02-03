@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export default function NotFound() {
     return (
-        <html lang="en">
-            <body className="bg-gradient-to-br from-slate-50 to-slate-100">
+        <html lang="en" suppressHydrationWarning>
+            <body className="bg-gradient-to-br from-slate-50 to-slate-100" suppressHydrationWarning>
                 <div className="min-h-screen flex items-center justify-center">
                     <div className="text-center px-8">
                         <div className="relative mb-8">

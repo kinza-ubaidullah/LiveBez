@@ -97,7 +97,7 @@ class ApiSportsClient {
     /**
      * Get league standings
      */
-    async getStandings(leagueId: string, season: string = '2024'): Promise<any[]> {
+    async getStandings(leagueId: string, season: string = '2025'): Promise<any[]> {
         const response = await this.request<any[]>('/standings', { league: leagueId, season }, 86400); // 24hr cache
         return response.response;
     }

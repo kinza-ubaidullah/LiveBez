@@ -42,6 +42,7 @@ export default function TopBar({ lang, languages }: TopBarProps) {
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
+                            suppressHydrationWarning
                             className="flex items-center gap-2 hover:text-white transition-colors uppercase text-[10px] font-black tracking-widest"
                         >
                             {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -72,6 +73,7 @@ export default function TopBar({ lang, languages }: TopBarProps) {
                         {/* Login */}
                         <button
                             onClick={() => setIsLoginOpen(true)}
+                            suppressHydrationWarning
                             className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors"
                         >
                             <LogIn className="w-4 h-4" />

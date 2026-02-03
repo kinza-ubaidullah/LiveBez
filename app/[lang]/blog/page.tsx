@@ -24,55 +24,131 @@ export default async function BlogListPage({ params }: { params: Promise<{ lang:
         include: {
             translations: {
                 where: { languageCode: lang }
+            },
+            category: {
+                include: {
+                    translations: { where: { languageCode: lang } }
+                }
             }
         },
         orderBy: { createdAt: 'desc' }
     });
 
+    const featuredArticle = articles[0];
+    const remainingArticles = articles.slice(1);
+
     return (
-        <div className="container mx-auto px-4 py-12">
-            <h1 className="text-4xl font-bold mb-12 text-slate-900 dark:text-white leading-tight">{t.blog.title}</h1>
+        <div className="bg-[#f8fafc] dark:bg-[#020617] min-h-screen">
+            <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl space-y-16">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {articles.map((article: any) => {
-                    const translation = article.translations[0];
-                    if (!translation) return null;
-                    return (
-                        <article key={article.id} className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm transition-transform hover:-translate-y-1">
-                            <div className="h-56 bg-slate-100 dark:bg-slate-700 relative overflow-hidden group">
-                                {article.featuredImage ? (
-                                    <Image
-                                        src={article.featuredImage}
-                                        alt={translation.title}
-                                        fill
-                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-500 font-black italic text-4xl uppercase tracking-tighter">
-                                        Insight
-                                    </div>
-                                )}
-                            </div>
+                {/* Header Section */}
+                <div className="space-y-4 max-w-3xl">
+                    <div className="inline-flex items-center gap-2 bg-blue-600 px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-widest">
+                        Expert Insights
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                        {t.blog.title || "LATEST FROM THE HUB"}
+                    </h1>
+                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium max-w-xl">
+                        Deep dives into tactics, transfer rumors, and expert match analysis from our global team.
+                    </p>
+                </div>
 
+                {/* Featured Article Section */}
+                {featuredArticle && (
+                    <section className="relative group overflow-hidden rounded-[2.5rem] bg-slate-900 aspect-[21/9] flex items-end">
+                        <Image
+                            src={featuredArticle.featuredImage || '/images/hero-bg.png'}
+                            alt="Featured"
+                            fill
+                            className="object-cover opacity-60 transition-transform duration-1000 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
-                            <div className="p-6">
-                                <span className="text-xs font-bold text-primary uppercase tracking-wider">{article.category}</span>
-                                <h2 className="text-xl font-bold mt-2 mb-3 leading-tight text-slate-900 dark:text-white">
-
-                                    <Link href={`/${lang}/blog/${translation.slug}`} className="hover:text-primary transition">
-                                        {translation.title}
-                                    </Link>
-                                </h2>
-                                <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-3 mb-4">{translation.excerpt || translation.content.substring(0, 150)}...</p>
-
-                                <Link href={`/${lang}/blog/${translation.slug}`} className="text-primary font-semibold text-sm inline-flex items-center">
-                                    {t.blog.readMore}
+                        <div className="relative z-10 p-8 md:p-16 space-y-6 max-w-3xl">
+                            <span className="text-blue-500 font-black text-xs uppercase tracking-[0.3em]">Featured Story</span>
+                            <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter uppercase leading-[0.9]">
+                                <Link href={`/${lang}/blog/${featuredArticle.translations[0]?.slug}`} className="hover:text-blue-500 transition-colors">
+                                    {featuredArticle.translations[0]?.title}
                                 </Link>
-                            </div>
-                        </article>
-                    );
-                })}
+                            </h2>
+                            <p className="text-slate-300 text-sm md:text-lg line-clamp-2 md:line-clamp-none font-medium">
+                                {featuredArticle.translations[0]?.excerpt || featuredArticle.translations[0]?.content.substring(0, 200) + '...'}
+                            </p>
+                            <Link
+                                href={`/${lang}/blog/${featuredArticle.translations[0]?.slug}`}
+                                className="inline-flex h-14 items-center bg-white text-slate-900 px-10 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-2xl"
+                            >
+                                Read Full Report
+                            </Link>
+                        </div>
+                    </section>
+                )}
+
+                {/* Grid Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                    {remainingArticles.length > 0 ? (
+                        remainingArticles.map((article: any) => {
+                            const translation = article.translations[0];
+                            const categoryTrans = article.category?.translations[0];
+                            if (!translation) return null;
+
+                            return (
+                                <article key={article.id} className="group flex flex-col space-y-6">
+                                    <Link href={`/${lang}/blog/${translation.slug}`} className="relative h-72 rounded-[2rem] overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900">
+                                        {article.featuredImage ? (
+                                            <Image
+                                                src={article.featuredImage}
+                                                alt={translation.title}
+                                                fill
+                                                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-800 font-black italic text-6xl uppercase tracking-tighter">
+                                                Insight
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </Link>
+
+                                    <div className="space-y-4 px-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                                                {categoryTrans?.name || article.category?.key || 'Sports'}
+                                            </span>
+                                            <div className="w-1 h-1 rounded-full bg-slate-300" />
+                                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                                {new Date(article.createdAt).toLocaleDateString(lang, { day: '2-digit', month: 'short' })}
+                                            </span>
+                                        </div>
+
+                                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase leading-none tracking-tighter group-hover:text-blue-600 transition-colors">
+                                            <Link href={`/${lang}/blog/${translation.slug}`}>
+                                                {translation.title}
+                                            </Link>
+                                        </h3>
+
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 font-medium leading-relaxed">
+                                            {translation.excerpt || translation.content.substring(0, 150)}...
+                                        </p>
+
+                                        <Link
+                                            href={`/${lang}/blog/${translation.slug}`}
+                                            className="inline-flex items-center gap-2 text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest border-b-2 border-transparent hover:border-blue-600 pb-1 transition-all"
+                                        >
+                                            Read More
+                                            <span className="text-blue-600">→</span>
+                                        </Link>
+                                    </div>
+                                </article>
+                            );
+                        })
+                    ) : featuredArticle ? null : (
+                        <div className="col-span-full py-32 text-center border-4 border-dashed border-slate-100 dark:border-slate-900 rounded-[3rem]">
+                            <p className="text-slate-400 font-black uppercase tracking-widest text-sm">Waiting for journalists to publish...</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
