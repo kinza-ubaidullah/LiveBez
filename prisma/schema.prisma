@@ -127,11 +127,11 @@ model Prediction {
   winProbHome  Float
   winProbAway  Float
   winProbDraw  Float
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
   bttsProb     Float?                  @default(50)
   overProb     Float?                  @default(50)
   underProb    Float?                  @default(50)
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
   match        Match                   @relation(fields: [matchId], references: [id])
   translations PredictionTranslation[]
 }
@@ -241,8 +241,8 @@ model BookmakerTranslation {
 
 model SyncLog {
   id        String   @id @default(cuid())
-  type      String   // 'Fixtures', 'Odds', 'Live'
-  status    String   // 'SUCCESS', 'FAILED'
+  type      String
+  status    String
   count     Int      @default(0)
   createdAt DateTime @default(now())
 }
@@ -252,7 +252,7 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
-  userId    String?  // Optional: link to a user
-  matchId   String?  // Optional: link to a specific match subscription
+  userId    String?
+  matchId   String?
   createdAt DateTime @default(now())
 }
