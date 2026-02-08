@@ -28,6 +28,7 @@ export default function AdminSidebar() {
         { label: "Analysis Lab", href: "/admin/analysis", icon: CheckSquare, color: "text-purple-500", group: "Editorial Control" },
         { label: "Match Predictions", href: "/admin/predictions", icon: Briefcase, color: "text-orange-500" },
         { label: "Blog & Articles", href: "/admin/articles", icon: FileText, color: "text-sky-500" },
+        { label: "Static Pages", href: "/admin/pages", icon: Database, color: "text-blue-400" },
         { label: "Partners & Bookies", href: "/admin/bookmakers", icon: Share2, color: "text-indigo-500", group: "System Hub" },
         { label: "Main Settings", href: "/admin/settings", icon: Settings, color: "text-slate-500" },
         { label: "Multilingual", href: "/admin/languages", icon: Globe, color: "text-emerald-500" },

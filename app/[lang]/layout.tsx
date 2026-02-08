@@ -124,9 +124,9 @@ export default async function LocaleLayout({
                                 <div className="md:col-span-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-8 italic">Legal & Support</h4>
                                     <ul className="space-y-6 text-xs font-black uppercase tracking-widest text-slate-400">
-                                        <li><Link href="#" className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.aboutUs}</Link></li>
-                                        <li><Link href="#" className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.privacyPolicy}</Link></li>
-                                        <li><Link href="#" className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.termsOfService}</Link></li>
+                                        <li><Link href={`/${lang}/about-us`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.aboutUs}</Link></li>
+                                        <li><Link href={`/${lang}/privacy-policy`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.privacyPolicy}</Link></li>
+                                        <li><Link href={`/${lang}/terms-of-service`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.termsOfService}</Link></li>
                                     </ul>
                                 </div>
                             </div>

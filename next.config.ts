@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
         hostname: 'via.placeholder.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'logos-world.net',
+        pathname: '/**',
+      },
     ],
 
   },

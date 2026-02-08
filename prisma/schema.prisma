@@ -22,6 +22,27 @@ model Language {
   matchTranslations      MatchTranslation[]
   predictionTranslations PredictionTranslation[]
   teamTranslations       TeamTranslation[]
+  staticPageTranslations StaticPageTranslation[]
+}
+
+model StaticPage {
+  id           String                  @id @default(cuid())
+  slug         String                  @unique
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  translations StaticPageTranslation[]
+}
+
+model StaticPageTranslation {
+  id           String     @id @default(cuid())
+  pageId       String
+  languageCode String
+  title        String
+  content      String     @db.Text
+  language     Language   @relation(fields: [languageCode], references: [code])
+  page         StaticPage @relation(fields: [pageId], references: [id])
+
+  @@unique([pageId, languageCode])
 }
 
 model SiteSettings {
@@ -251,6 +272,8 @@ model BookmakerTranslation {
   languageCode String
   name         String
   bonusText    String
+  sampleOdds   String?
+  description  String?
   affiliateUrl String
   bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id])
   language     Language  @relation(fields: [languageCode], references: [code])

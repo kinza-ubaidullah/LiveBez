@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { generateMatchAnalysis } from "@/lib/ai-service";
 import { getFullMatchDetails } from "@/lib/match-service";
+import { syncAndAnalyzeMatch } from "@/lib/analysis-service";
 
 // Use a local type if the Prisma one is stale in the IDE
 export type LocalContentStatus = 'DRAFT' | 'PUBLISHED' | 'REJECTED';
@@ -316,72 +317,7 @@ export async function createMatchAction(
 
 
 export async function generateAIAnalysisAction(matchId: string, lang: string) {
-    try {
-        const match = await prisma.match.findUnique({
-            where: { id: matchId },
-            include: {
-                league: { include: { translations: { where: { languageCode: lang } } } },
-                prediction: true
-            }
-        });
-
-        if (!match) throw new Error("Match not found");
-
-        if (!match.apiSportsId) {
-            throw new Error("Cannot generate detailed AI analysis for this match because it is not linked to an official sports API (missing API ID). Please sync the match or enter data manually first.");
-        }
-
-        const fullDetails = await getFullMatchDetails(matchId, match.apiSportsId);
-
-        const safeJsonParse = (str: string | null) => {
-            if (!str) return null;
-            try {
-                return JSON.parse(str);
-            } catch (e) {
-                console.error("JSON parse error for field:", str.substring(0, 50));
-                return null;
-            }
-        };
-
-        const analysis = await generateMatchAnalysis({
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            league: match.league.translations[0]?.name || match.league.country,
-            stats: safeJsonParse(fullDetails?.stats || null),
-            h2h: safeJsonParse((fullDetails as any)?.h2h || null),
-            prediction: match.prediction,
-            lang
-        });
-
-        // Save as DRAFT in MatchTranslation
-        await (prisma.matchTranslation as any).upsert({
-            where: { matchId_languageCode: { matchId, languageCode: lang } },
-            update: {
-                analysis,
-                status: 'DRAFT' as any
-            },
-            create: {
-                matchId,
-                languageCode: lang,
-                name: `${match.homeTeam} vs ${match.awayTeam}`,
-                slug: `${match.homeTeam.toLowerCase().replace(/\s+/g, '-')}-vs-${match.awayTeam.toLowerCase().replace(/\s+/g, '-')}-${lang}`,
-                analysis,
-                status: 'DRAFT' as any,
-                seo: {
-                    create: {
-                        title: `${match.homeTeam} vs ${match.awayTeam} Prediction & Analysis`,
-                        description: `Get the latest ${match.homeTeam} vs ${match.awayTeam} prediction and tactical analysis.`,
-                    }
-                }
-            }
-        });
-
-        revalidatePath(`/admin/matches/${matchId}`);
-        return { success: true, analysis };
-    } catch (error: any) {
-        console.error("AI Generation failed:", error);
-        return { error: error.message || "Failed to generate analysis" };
-    }
+    return await syncAndAnalyzeMatch(matchId, lang, true); // true for force update when triggered manually
 }
 
 export async function updateAnalysisStatusAction(matchId: string, lang: string, status: string) {

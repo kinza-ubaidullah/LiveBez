@@ -1,25 +1,27 @@
-const { generateMatchAnalysis } = require('../lib/ai-service');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
-async function testGemini() {
-    console.log('--- Testing Gemini AI Service ---');
-    const matchData = {
-        homeTeam: 'Real Madrid',
-        awayTeam: 'Barcelona',
-        league: 'La Liga',
-        stats: 'Real Madrid have won 4 of their last 5. Barcelona are unbeaten in 10.',
-        h2h: 'Last 5: RM 2, Barca 2, Draw 1',
-        prediction: { winProbHome: 40, winProbAway: 35, winProbDraw: 25 },
-        lang: 'en'
-    };
+async function listModels() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const genAI = new GoogleGenerativeAI(apiKey.trim());
 
     try {
-        const analysis = await generateMatchAnalysis(matchData);
-        console.log('SUCCESS! AI Output Sample:');
-        console.log(analysis.substring(0, 500) + '...');
+        // Unfortunately the direct listModels is not in the main class as a simple method in all versions
+        // but we can try to fetch it via fetch if needed.
+        // Actually, let's just try "gemini-pro" which is very standard.
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const result = await model.generateContent("test");
+        console.log("Gemini-pro works!");
     } catch (e) {
-        console.error('Gemini Test Failed:', e.message);
+        console.error("Gemini-pro failed:", e.message);
+    }
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const result = await model.generateContent("test");
+        console.log("Gemini-1.5-flash-latest works!");
+    } catch (e) {
+        console.error("Gemini-1.5-flash-latest failed:", e.message);
     }
 }
-
-testGemini();
+listModels();

@@ -14,6 +14,8 @@ export async function updateBookmakerAction(
             languageCode: string;
             name: string;
             bonusText: string;
+            sampleOdds?: string | null;
+            description?: string | null;
             affiliateUrl: string;
         }[];
     }
@@ -52,6 +54,8 @@ export async function updateBookmakerAction(
                 update: {
                     name: trans.name,
                     bonusText: trans.bonusText,
+                    sampleOdds: trans.sampleOdds,
+                    description: trans.description,
                     affiliateUrl: trans.affiliateUrl
                 },
                 create: {
@@ -59,6 +63,8 @@ export async function updateBookmakerAction(
                     languageCode: trans.languageCode,
                     name: trans.name,
                     bonusText: trans.bonusText,
+                    sampleOdds: trans.sampleOdds,
+                    description: trans.description,
                     affiliateUrl: trans.affiliateUrl
                 }
             });

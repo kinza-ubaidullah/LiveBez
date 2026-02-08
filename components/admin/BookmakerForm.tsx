@@ -113,6 +113,27 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
                         </div>
 
                         <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Sample Odds (Display Only)</label>
+                            <input
+                                type="text"
+                                value={currentTrans.sampleOdds || ""}
+                                onChange={(e) => handleTransChange('sampleOdds', e.target.value)}
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-blue-600 outline-none focus:border-emerald-500"
+                                placeholder="Home: 2.10 | Draw: 3.40 | Away: 4.50"
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Description</label>
+                            <textarea
+                                value={currentTrans.description || ""}
+                                onChange={(e) => handleTransChange('description', e.target.value)}
+                                className="w-full p-4 h-32 bg-slate-50 border border-slate-100 rounded-2xl font-medium text-slate-600 outline-none focus:border-emerald-500 resize-none"
+                                placeholder="Brief overview of the bookmaker service..."
+                            />
+                        </div>
+
+                        <div className="space-y-3">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Deep Link (Affiliate URL)</label>
                             <input
                                 type="text"

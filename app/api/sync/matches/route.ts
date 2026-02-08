@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { apiSports } from '@/lib/sports-api';
-import { oddsApi, SOCCER_SPORTS } from '@/lib/odds-api';
+import { oddsApi } from '@/lib/odds-api';
+import { syncAndAnalyzeMatch } from '@/lib/analysis-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +75,7 @@ async function upsertLeague(leagueData: any) {
 export async function GET(request: NextRequest) {
     try {
         let syncedCount = 0;
+        let analysisCount = 0;
 
         // 1. Fetch Odds in background for all major leagues
         let allOdds: any[] = [];
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const dateParam = searchParams.get('date');
+        const autoAnalyze = searchParams.get('analyze') === 'true';
 
         // 3. Fetch Data (Next 50 and Live)
         const upcoming = await apiSports.getLiveScores(dateParam ? { date: dateParam } : { next: '50' });
@@ -114,6 +117,8 @@ export async function GET(request: NextRequest) {
         const allMap = new Map();
         [...upcoming, ...live].forEach(f => allMap.set(f.fixture.id, f));
         const fixtures = Array.from(allMap.values());
+
+        const languages = await prisma.language.findMany({ where: { isVisible: true } });
 
         for (const f of fixtures) {
             const dbLeague = await upsertLeague(f.league);
@@ -124,7 +129,8 @@ export async function GET(request: NextRequest) {
                 .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
             const existingMatch = await prisma.match.findFirst({
-                where: { apiSportsId: apiMatchId }
+                where: { apiSportsId: apiMatchId },
+                include: { translations: true }
             });
 
             // Normalize names for better matching
@@ -140,7 +146,6 @@ export async function GET(request: NextRequest) {
             });
 
             let probabilityData = null;
-            let bttsProb = null;
 
             if (matchOdds?.bookmakers?.length > 0) {
                 // H2H Extraction
@@ -162,18 +167,6 @@ export async function GET(request: NextRequest) {
                         };
                     }
                 }
-
-                // BTTS Extraction
-                const btts = matchOdds.bookmakers[0].markets.find((m: any) => m.key === 'btts');
-                if (btts) {
-                    const yesPrice = btts.outcomes.find((o: any) => o.name === 'Yes')?.price;
-                    const noPrice = btts.outcomes.find((o: any) => o.name === 'No')?.price;
-                    if (yesPrice && noPrice) {
-                        const yesP = 1 / yesPrice;
-                        const noP = 1 / noPrice;
-                        bttsProb = Math.round((yesP / (yesP + noP)) * 100);
-                    }
-                }
             }
 
             let matchId = "";
@@ -192,8 +185,6 @@ export async function GET(request: NextRequest) {
                 });
                 matchId = existingMatch.id;
             } else {
-                const languages = await prisma.language.findMany({ where: { isVisible: true } });
-
                 const newMatch = await prisma.match.create({
                     data: {
                         date: new Date(f.fixture.date),
@@ -208,11 +199,12 @@ export async function GET(request: NextRequest) {
                         homeTeamLogo: f.teams.home.logo,
                         awayTeamLogo: f.teams.away.logo,
                         mainTip: probabilityData ? (probabilityData.home > probabilityData.away ? "Home Win" : "Away Win") : "Analysis Pending",
+                        isFeatured: POPULAR_LEAGUES.includes(f.league.id),
                         translations: {
                             create: languages.map(lang => ({
                                 language: { connect: { code: lang.code } },
                                 name: `${f.teams.home.name} vs ${f.teams.away.name}`,
-                                slug: `${slug}-${lang.code}`, // Stable slug
+                                slug: `${slug}-${lang.code}`,
                                 seo: {
                                     create: {
                                         title: `${f.teams.home.name} vs ${f.teams.away.name}`
@@ -227,10 +219,6 @@ export async function GET(request: NextRequest) {
 
             // Sync Predictions/Odds
             if (probabilityData) {
-                // Fetch extra probes for this specific match loop if not already in probabilityData
-                // (Note: probabilityData here is h2h, from line 134)
-
-                // Let's refine the probability data extraction inside the loop
                 const h2h = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'h2h');
                 const btts = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'btts');
                 const totals = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'totals');
@@ -273,10 +261,18 @@ export async function GET(request: NextRequest) {
                         underProb: underProbValue,
                     }
                 });
-            } else {
-                // Fetch odds from API if not found in cache
-                // This is a placeholder for waiting for odds fetch to complete
-                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // 4. Auto-Generate Articles (Analysis)
+            // Trigger analysis for new matches in popular leagues OR if explicitly requested
+            const isPopular = POPULAR_LEAGUES.includes(f.league.id);
+            const isNew = !existingMatch;
+            const isLiveUpdate = !!existingMatch && (f.fixture.status.short === '1H' || f.fixture.status.short === '2H' || f.fixture.status.short === 'FT');
+
+            if (autoAnalyze || (isPopular && (isNew || isLiveUpdate))) {
+                // Analyzing EN by default to populate the blog
+                await syncAndAnalyzeMatch(matchId, 'en', autoAnalyze || isLiveUpdate);
+                analysisCount++;
             }
 
             syncedCount++;
@@ -286,7 +282,7 @@ export async function GET(request: NextRequest) {
             data: { type: 'Matches', status: 'SUCCESS', count: syncedCount }
         });
 
-        return NextResponse.json({ success: true, count: syncedCount });
+        return NextResponse.json({ success: true, synced: syncedCount, analyzed: analysisCount });
     } catch (error: any) {
         console.error("Sync Error:", error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
