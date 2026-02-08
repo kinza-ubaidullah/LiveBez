@@ -5,40 +5,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sports-platform.vercel.app';
 
     try {
-        const [leagues, teams, matches, articles, languages] = await Promise.all([
-            prisma.leagueTranslation.findMany({
-                where: { seo: { noIndex: false } },
-                select: {
-                    slug: true,
-                    languageCode: true,
-                    league: { select: { updatedAt: true } }
-                }
-            }),
-            prisma.teamTranslation.findMany({
-                where: { seo: { noIndex: false } },
-                select: {
-                    slug: true,
-                    languageCode: true,
-                    team: { select: { updatedAt: true } }
-                }
-            }),
-            prisma.matchTranslation.findMany({
-                where: {
-                    seo: { noIndex: false },
-                    analysis: { not: null }
-                },
-                select: {
-                    slug: true,
-                    languageCode: true,
-                    match: { select: { updatedAt: true, league: { select: { translations: { where: { languageCode: 'en' }, select: { slug: true } } } } } }
-                }
-            }),
-            prisma.articleTranslation.findMany({
-                where: { seo: { noIndex: false } },
-                select: { slug: true, languageCode: true, article: { select: { updatedAt: true } } }
-            }),
-            prisma.language.findMany({ where: { isVisible: true }, select: { code: true } })
-        ]);
+        // Fetch data sequentially to avoid connection pool exhaustion
+        const leagues = await prisma.leagueTranslation.findMany({
+            where: { seo: { noIndex: false } },
+            select: {
+                slug: true,
+                languageCode: true,
+                league: { select: { updatedAt: true } }
+            }
+        });
+        const teams = await prisma.teamTranslation.findMany({
+            where: { seo: { noIndex: false } },
+            select: {
+                slug: true,
+                languageCode: true,
+                team: { select: { updatedAt: true } }
+            }
+        });
+        const matches = await prisma.matchTranslation.findMany({
+            where: {
+                seo: { noIndex: false },
+                analysis: { not: null }
+            },
+            select: {
+                slug: true,
+                languageCode: true,
+                match: { select: { updatedAt: true, league: { select: { translations: { where: { languageCode: 'en' }, select: { slug: true } } } } } }
+            }
+        });
+        const articles = await prisma.articleTranslation.findMany({
+            where: { seo: { noIndex: false } },
+            select: { slug: true, languageCode: true, article: { select: { updatedAt: true } } }
+        });
+        const languages = await prisma.language.findMany({ where: { isVisible: true }, select: { code: true } });
 
         const sitemapEntries: MetadataRoute.Sitemap = [];
 

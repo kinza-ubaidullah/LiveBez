@@ -11,6 +11,7 @@ export default async function EditMatchPage({ params }: { params: Promise<{ id: 
             where: { id },
             include: {
                 prediction: true,
+                league: { include: { translations: true } },
                 translations: {
                     include: { seo: true }
                 }

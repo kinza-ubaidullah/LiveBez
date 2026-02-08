@@ -119,6 +119,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                             fill
                             sizes="64px"
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            unoptimized
                         />
                     ) : (
                         leagueTrans.league.country.substring(0, 2).toUpperCase()
@@ -158,7 +159,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                                                 <div className="font-bold text-sm md:text-lg text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition truncate">{match.homeTeam}</div>
                                                 <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex-shrink-0 relative overflow-hidden flex items-center justify-center text-[10px] md:text-xs font-black">
                                                     {match.homeTeamLogo ? (
-                                                        <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="40px" className="object-contain p-1" />
+                                                        <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="40px" className="object-contain p-1" unoptimized />
                                                     ) : (
                                                         match.homeTeam.substring(0, 1)
                                                     )}
@@ -175,7 +176,7 @@ export default async function LeaguePage({ params }: { params: Promise<{ lang: s
                                             <div className="flex items-center justify-start gap-2 md:gap-3 text-left">
                                                 <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 dark:bg-slate-700 rounded-lg flex-shrink-0 relative overflow-hidden flex items-center justify-center text-[10px] md:text-xs font-black">
                                                     {match.awayTeamLogo ? (
-                                                        <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="40px" className="object-contain p-1" />
+                                                        <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="40px" className="object-contain p-1" unoptimized />
                                                     ) : (
                                                         match.awayTeam.substring(0, 1)
                                                     )}

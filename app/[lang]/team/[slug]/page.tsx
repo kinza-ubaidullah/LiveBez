@@ -108,7 +108,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
                     <div className="flex flex-col md:flex-row items-center gap-12">
                         <div className="relative w-32 h-32 md:w-48 md:h-48 bg-white dark:bg-slate-950 rounded-[3rem] shadow-2xl flex items-center justify-center p-6 border border-white/10 group-hover:scale-105 transition-transform duration-500">
                             {team.logoUrl ? (
-                                <Image src={team.logoUrl} alt={translation.name} fill className="object-contain p-8" />
+                                <Image src={team.logoUrl} alt={translation.name} fill className="object-contain p-8" unoptimized />
                             ) : (
                                 <div className="text-6xl font-black text-slate-200 uppercase">{translation.name.substring(0, 2)}</div>
                             )}

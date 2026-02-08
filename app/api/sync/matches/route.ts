@@ -104,9 +104,12 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        const { searchParams } = new URL(request.url);
+        const dateParam = searchParams.get('date');
+
         // 3. Fetch Data (Next 50 and Live)
-        const upcoming = await apiSports.getLiveScores({ next: '50' });
-        const live = await apiSports.getLiveScores({ live: 'all' });
+        const upcoming = await apiSports.getLiveScores(dateParam ? { date: dateParam } : { next: '50' });
+        const live = dateParam ? [] : await apiSports.getLiveScores({ live: 'all' });
 
         const allMap = new Map();
         [...upcoming, ...live].forEach(f => allMap.set(f.fixture.id, f));
@@ -209,7 +212,7 @@ export async function GET(request: NextRequest) {
                             create: languages.map(lang => ({
                                 language: { connect: { code: lang.code } },
                                 name: `${f.teams.home.name} vs ${f.teams.away.name}`,
-                                slug: `${slug}-${lang.code}-${Date.now()}`,
+                                slug: `${slug}-${lang.code}`, // Stable slug
                                 seo: {
                                     create: {
                                         title: `${f.teams.home.name} vs ${f.teams.away.name}`

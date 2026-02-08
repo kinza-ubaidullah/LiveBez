@@ -74,7 +74,7 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
         if (lower.includes('home win')) return lang === 'fa' ? 'برد میزبان' : lang === 'ar' ? 'فوز صاحب الأرض' : 'Home Win';
         if (lower.includes('away win')) return lang === 'fa' ? 'برد میهمان' : lang === 'ar' ? 'فوز الضيف' : 'Away Win';
         if (lower.includes('draw')) return lang === 'fa' ? 'مساوی' : lang === 'ar' ? 'تعادل' : 'Draw';
-        if (lower.includes('btts')) return lang === 'fa' ? 'گلزنی ہر دو ٹیم' : lang === 'ar' ? 'كلا الفريقين يسجل' : 'BTTS Yes';
+        if (lower.includes('btts')) return lang === 'fa' ? 'گلزنی هر دو تیم' : lang === 'ar' ? 'كلا الفريقين يسجل' : 'BTTS Yes';
         return tip;
     };
 

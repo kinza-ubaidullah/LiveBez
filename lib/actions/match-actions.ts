@@ -364,7 +364,7 @@ export async function generateAIAnalysisAction(matchId: string, lang: string) {
                 matchId,
                 languageCode: lang,
                 name: `${match.homeTeam} vs ${match.awayTeam}`,
-                slug: `${match.homeTeam.toLowerCase().replace(/\s+/g, '-')}-vs-${match.awayTeam.toLowerCase().replace(/\s+/g, '-')}-${lang}-${Date.now()}`,
+                slug: `${match.homeTeam.toLowerCase().replace(/\s+/g, '-')}-vs-${match.awayTeam.toLowerCase().replace(/\s+/g, '-')}-${lang}`,
                 analysis,
                 status: 'DRAFT' as any,
                 seo: {

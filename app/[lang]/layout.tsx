@@ -29,32 +29,32 @@ export default async function LocaleLayout({
     let topLeagues: any[] = [];
     let topBookmakers: any[] = [];
 
-    try {
-        const [settingsRes, languagesRes, leaguesRes, bookmakersRes] = await Promise.all([
-            prisma.siteSettings?.findFirst() || Promise.resolve(null),
-            prisma.language?.findMany({
-                where: { isVisible: true },
-                orderBy: { name: 'asc' }
-            }) || Promise.resolve([]),
-            prisma.league?.findMany({
-                where: { isFeatured: true } as any,
-                include: { translations: { where: { languageCode: lang } } },
-                take: 6
-            }) || Promise.resolve([]),
-            prisma.bookmaker?.findMany({
-                where: { isActive: true } as any,
-                include: { translations: { where: { languageCode: lang } } },
-                orderBy: { rating: 'desc' },
-                take: 5
-            }) || Promise.resolve([])
-        ]);
-        settings = settingsRes;
-        languages = languagesRes || [];
-        topLeagues = leaguesRes || [];
-        topBookmakers = bookmakersRes || [];
-    } catch (error) {
-        console.error("Prisma lookup failed in layout.tsx:", error);
-    }
+    // Safe fetch helpers to prevent layout-level crashes
+    const safeFetch = async (promise: Promise<any>, fallback: any) => {
+        try {
+            return await promise || fallback;
+        } catch (e) {
+            console.error("Database query failed in layout.tsx:", e);
+            return fallback;
+        }
+    };
+
+    settings = await safeFetch(prisma.siteSettings?.findFirst(), null);
+    languages = await safeFetch(prisma.language?.findMany({
+        where: { isVisible: true },
+        orderBy: { name: 'asc' }
+    }), []);
+    topLeagues = await safeFetch(prisma.league?.findMany({
+        where: { isFeatured: true } as any,
+        include: { translations: { where: { languageCode: lang } } },
+        take: 6
+    }), []);
+    topBookmakers = await safeFetch(prisma.bookmaker?.findMany({
+        where: { isActive: true } as any,
+        include: { translations: { where: { languageCode: lang } } },
+        orderBy: { rating: 'desc' },
+        take: 5
+    }), []);
 
     const displayTitle = settings?.globalTitle || "LiveBaz | Live Scores & Predictions";
     const brandColor = settings?.globalBrandColor || "#2563eb";

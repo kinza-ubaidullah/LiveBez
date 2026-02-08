@@ -67,7 +67,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                         <div className="flex-1 flex flex-col items-center gap-2 md:gap-4 group/team min-w-0">
                             <div className="relative w-16 h-16 md:w-24 md:h-24 bg-white dark:bg-slate-950 rounded-2xl md:rounded-[2rem] shadow-xl md:shadow-2xl flex items-center justify-center p-2 md:p-4 border border-white/10 group-hover/team:scale-110 transition-transform duration-500">
                                 {match.homeTeamLogo ? (
-                                    <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" />
+                                    <Image src={match.homeTeamLogo} alt={match.homeTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" unoptimized />
                                 ) : <div className="text-2xl md:text-4xl font-black text-slate-200">?</div>}
                             </div>
                             <span className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest text-center truncate w-full">{match.homeTeam}</span>
@@ -85,7 +85,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                         <div className="flex-1 flex flex-col items-center gap-2 md:gap-4 group/team min-w-0">
                             <div className="relative w-16 h-16 md:w-24 md:h-24 bg-white dark:bg-slate-950 rounded-2xl md:rounded-[2rem] shadow-xl md:shadow-2xl flex items-center justify-center p-2 md:p-4 border border-white/10 group-hover/team:scale-110 transition-transform duration-500">
                                 {match.awayTeamLogo ? (
-                                    <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" />
+                                    <Image src={match.awayTeamLogo} alt={match.awayTeam} fill sizes="(max-width: 768px) 64px, 96px" className="object-contain p-2 md:p-4" unoptimized />
                                 ) : <div className="text-2xl md:text-4xl font-black text-slate-200">?</div>}
                             </div>
                             <span className="text-[9px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest text-center truncate w-full">{match.awayTeam}</span>

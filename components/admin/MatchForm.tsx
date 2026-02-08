@@ -460,14 +460,19 @@ export default function MatchForm({ match, languages, leagues = [], isNew = fals
                         <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b pb-4">SEO Architecture</h3>
                         <div className="space-y-6">
                             <div className="flex justify-end">
-                                <a
-                                    href={`/${activeLang}/match/${currentTrans.slug}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
-                                >
-                                    View Live <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                </a>
+                                {(() => {
+                                    const leagueSlug = match?.league?.translations?.find((lt: any) => lt.languageCode === activeLang)?.slug || "league";
+                                    return (
+                                        <a
+                                            href={`/${activeLang}/league/${leagueSlug}/${currentTrans.slug}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
+                                        >
+                                            View Live <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
+                                    );
+                                })()}
                             </div>
 
                             <div className="space-y-2">

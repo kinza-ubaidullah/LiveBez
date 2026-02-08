@@ -52,66 +52,73 @@ export default async function Home({
     const targetDate = day === 'tomorrow' ? tomorrow : today;
     const dateString = targetDate.toISOString().split('T')[0];
 
-    try {
-        // Fetch data sequentially to avoid connection pool exhaustion
-        leagues = await prisma.league?.findMany({
-            where: {
-                translations: { some: { languageCode: lang } },
-                isFeatured: true
-            },
-            include: { translations: { where: { languageCode: lang } } }
-        }) || [];
-
-        featuredArticles = await prisma.article?.findMany({
-            where: { published: true, translations: { some: { languageCode: lang } } },
-            include: { translations: { where: { languageCode: lang } } },
-            take: 4,
-            orderBy: { createdAt: 'desc' }
-        }) || [];
-
-
-
-        // Fetch Matches for the target day
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
-
-        matches = await prisma.match?.findMany({
-            where: {
-                date: { gte: startOfDay, lte: endOfDay },
-                translations: { some: { languageCode: lang, status: 'PUBLISHED' } }
-            },
-            include: {
-                translations: { where: { languageCode: lang } },
-                prediction: true,
-                league: {
-                    include: {
-                        translations: { where: { languageCode: lang } }
-                    }
-                }
-            },
-            orderBy: { date: 'asc' }
-        }) || [];
-
-        // --- Automatic Background Sync Logic (Only for Today) ---
-        if (day === 'today') {
-            const lastSync = await (prisma as any).syncLog?.findFirst({
-                where: { type: 'Matches' },
-                orderBy: { createdAt: 'desc' }
-            });
-
-            const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-            if (matches.length === 0 || !lastSync || lastSync.createdAt < thirtyMinsAgo) {
-                console.log("🔄 Auto-syncing projections in background...");
-                fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4005'}/api/sync/matches`).catch(e => { });
-            }
+    // Safe fetch helpers
+    const safeFetch = async (promise: Promise<any>, fallback: any) => {
+        try {
+            return await promise || fallback;
+        } catch (e) {
+            console.error("Database query failed in page.tsx:", e);
+            return fallback;
         }
+    };
 
-        // Fallback: Fetch from API if DB is empty for this day
-        if (matches.length === 0) {
-            console.log(`⚠️ DB empty for ${day}, fetching from API...`);
+    leagues = await safeFetch(prisma.league?.findMany({
+        where: {
+            translations: { some: { languageCode: lang } },
+            isFeatured: true
+        },
+        include: { translations: { where: { languageCode: lang } } }
+    }), []);
+
+    featuredArticles = await safeFetch(prisma.article?.findMany({
+        where: { published: true, translations: { some: { languageCode: lang } } },
+        include: { translations: { where: { languageCode: lang } } },
+        take: 4,
+        orderBy: { createdAt: 'desc' }
+    }), []);
+
+    // Fetch Matches for the target day
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    matches = await safeFetch(prisma.match?.findMany({
+        where: {
+            date: { gte: startOfDay, lte: endOfDay },
+            translations: { some: { languageCode: lang, status: 'PUBLISHED' } }
+        },
+        include: {
+            translations: { where: { languageCode: lang } },
+            prediction: true,
+            league: {
+                include: {
+                    translations: { where: { languageCode: lang } }
+                }
+            }
+        },
+        orderBy: { date: 'asc' }
+    }), []);
+
+    // --- Automatic Background Sync Logic (Today & Tomorrow) ---
+    if (day === 'today' || day === 'tomorrow') {
+        const lastSync = await safeFetch((prisma as any).syncLog?.findFirst({
+            where: { type: 'Matches' },
+            orderBy: { createdAt: 'desc' }
+        }), null);
+
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+        if (matches.length === 0 || !lastSync || lastSync.createdAt < thirtyMinsAgo) {
+            console.log(`🔄 Auto-syncing projections for ${day} in background...`);
+            fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:4005'}/api/sync/matches?date=${dateString}`).catch(e => { });
+        }
+    }
+
+    // Fallback: Fetch from API if DB is empty for this day
+    if (matches.length === 0) {
+        console.log(`⚠️ DB empty for ${day}, fetching from API...`);
+        try {
             const apiMatches = await apiSports.getLiveScores({ date: dateString });
 
             matches = apiMatches.map((m: any) => ({
@@ -134,10 +141,9 @@ export default async function Home({
                     name: `${m.teams.home.name} vs ${m.teams.away.name}`
                 }]
             }));
+        } catch (apiErr) {
+            console.error("API sports fallback failed:", apiErr);
         }
-
-    } catch (e) {
-        console.error("Home page data fetch failed:", e);
     }
 
     return (

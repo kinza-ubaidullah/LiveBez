@@ -59,12 +59,12 @@ model League {
   apiId        String?             @unique
   country      String
   logoUrl      String?
-  isFeatured   Boolean             @default(false)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+  isFeatured   Boolean             @default(false)
+  articles     Article[]
   translations LeagueTranslation[]
   matches      Match[]
-  articles     Article[]
 }
 
 model LeagueTranslation {
@@ -88,10 +88,6 @@ model Match {
   date         DateTime
   homeTeam     String
   awayTeam     String
-  homeTeamId   String?
-  awayTeamId   String?
-  homeTeamRel  Team?              @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeamRel  Team?              @relation("AwayTeam", fields: [awayTeamId], references: [id])
   homeScore    Int?
   awayScore    Int?
   leagueId     String
@@ -100,7 +96,6 @@ model Match {
   apiSportsId  String?
   lineups      String?
   stats        String?
-  h2h          String?
   homeTeamLogo String?
   awayTeamLogo String?
   mainTip      String?
@@ -108,16 +103,15 @@ model Match {
   isFeatured   Boolean            @default(false)
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
+  h2h          String?
+  awayTeamId   String?
+  homeTeamId   String?
+  articles     Article[]
+  awayTeamRel  Team?              @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeTeamRel  Team?              @relation("HomeTeam", fields: [homeTeamId], references: [id])
   league       League             @relation(fields: [leagueId], references: [id])
   translations MatchTranslation[]
   prediction   Prediction?
-  articles     Article[]
-}
-
-enum ContentStatus {
-  DRAFT
-  PUBLISHED
-  REJECTED
 }
 
 model MatchTranslation {
@@ -128,9 +122,9 @@ model MatchTranslation {
   name         String
   content      String?
   analysis     String?
-  status       ContentStatus @default(DRAFT)
   isActive     Boolean       @default(true)
   seoId        String        @unique
+  status       ContentStatus @default(DRAFT)
   language     Language      @relation(fields: [languageCode], references: [code])
   match        Match         @relation(fields: [matchId], references: [id])
   seo          SeoFields     @relation(fields: [seoId], references: [id])
@@ -144,12 +138,12 @@ model Prediction {
   winProbHome  Float
   winProbAway  Float
   winProbDraw  Float
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
   bttsProb     Float?                  @default(50)
   overProb     Float?                  @default(50)
   underProb    Float?                  @default(50)
   isManual     Boolean                 @default(false)
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
   match        Match                   @relation(fields: [matchId], references: [id])
   translations PredictionTranslation[]
 }
@@ -168,13 +162,13 @@ model PredictionTranslation {
 model Article {
   id            String               @id @default(cuid())
   categoryId    String
-  leagueId      String?
-  matchId       String?
   published     Boolean              @default(false)
-  isFeatured    Boolean              @default(false)
   featuredImage String?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
+  isFeatured    Boolean              @default(false)
+  leagueId      String?
+  matchId       String?
   category      ArticleCategory      @relation(fields: [categoryId], references: [id])
   league        League?              @relation(fields: [leagueId], references: [id])
   match         Match?               @relation(fields: [matchId], references: [id])
@@ -244,10 +238,10 @@ model Bookmaker {
   id           String                 @id @default(cuid())
   logoUrl      String?
   rating       Float                  @default(5.0)
-  isDoFollow   Boolean                @default(false)
-  isActive     Boolean                @default(true)
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
+  isActive     Boolean                @default(true)
+  isDoFollow   Boolean                @default(false)
   translations BookmakerTranslation[]
 }
 
@@ -289,9 +283,9 @@ model Team {
   country      String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  translations TeamTranslation[]
-  homeMatches  Match[]           @relation("HomeTeam")
   awayMatches  Match[]           @relation("AwayTeam")
+  homeMatches  Match[]           @relation("HomeTeam")
+  translations TeamTranslation[]
 }
 
 model TeamTranslation {
@@ -303,8 +297,14 @@ model TeamTranslation {
   description  String?
   seoId        String    @unique
   language     Language  @relation(fields: [languageCode], references: [code])
-  team         Team      @relation(fields: [teamId], references: [id])
   seo          SeoFields @relation(fields: [seoId], references: [id])
+  team         Team      @relation(fields: [teamId], references: [id])
 
   @@unique([teamId, languageCode])
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  REJECTED
 }

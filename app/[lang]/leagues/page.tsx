@@ -58,6 +58,7 @@ export default async function LeaguesPage({ params }: { params: Promise<{ lang: 
                                             fill
                                             sizes="64px"
                                             className="object-contain p-2 group-hover:scale-110 transition-transform duration-500"
+                                            unoptimized
                                         />
                                     ) : (
                                         <span className="font-black text-slate-300 dark:text-slate-600 select-none">
