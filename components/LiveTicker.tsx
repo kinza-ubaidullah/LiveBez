@@ -74,7 +74,7 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
             <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 to-transparent z-10" />
 
             <div
-                className="flex items-center gap-16 animate-scroll whitespace-nowrap px-10 w-max"
+                className="flex items-center gap-16 slow-ticker-animation whitespace-nowrap px-10 w-max"
                 style={{ animationDuration: '600s' }}
             >
                 {/* Double the list for seamless loop */}
