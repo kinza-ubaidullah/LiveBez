@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import MatchForm from "@/components/admin/MatchForm";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic';
+
 export default async function EditMatchPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
