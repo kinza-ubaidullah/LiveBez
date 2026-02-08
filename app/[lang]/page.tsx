@@ -53,21 +53,23 @@ export default async function Home({
     const dateString = targetDate.toISOString().split('T')[0];
 
     try {
-        const [leaguesRes, articlesRes] = await Promise.all([
-            prisma.league?.findMany({
-                where: { translations: { some: { languageCode: lang } } },
-                include: { translations: { where: { languageCode: lang } } }
-            }) || Promise.resolve([]),
-            prisma.article?.findMany({
-                where: { published: true, translations: { some: { languageCode: lang } } },
-                include: { translations: { where: { languageCode: lang } } },
-                take: 4,
-                orderBy: { createdAt: 'desc' }
-            }) || Promise.resolve([]),
-        ]);
+        // Fetch data sequentially to avoid connection pool exhaustion
+        leagues = await prisma.league?.findMany({
+            where: {
+                translations: { some: { languageCode: lang } },
+                isFeatured: true
+            },
+            include: { translations: { where: { languageCode: lang } } }
+        }) || [];
 
-        leagues = leaguesRes;
-        featuredArticles = articlesRes;
+        featuredArticles = await prisma.article?.findMany({
+            where: { published: true, translations: { some: { languageCode: lang } } },
+            include: { translations: { where: { languageCode: lang } } },
+            take: 4,
+            orderBy: { createdAt: 'desc' }
+        }) || [];
+
+
 
         // Fetch Matches for the target day
         const startOfDay = new Date(targetDate);
@@ -78,7 +80,7 @@ export default async function Home({
         matches = await prisma.match?.findMany({
             where: {
                 date: { gte: startOfDay, lte: endOfDay },
-                translations: { some: { languageCode: lang } }
+                translations: { some: { languageCode: lang, status: 'PUBLISHED' } }
             },
             include: {
                 translations: { where: { languageCode: lang } },

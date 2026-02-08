@@ -52,7 +52,7 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
     });
 
     // 2. Strict check: No fallback to numeric IDs. Slugs must match perfectly.
-    if (!matchTrans || matchTrans.languageCode !== lang) {
+    if (!matchTrans || matchTrans.languageCode !== lang || matchTrans.status !== 'PUBLISHED') {
         notFound();
     }
 

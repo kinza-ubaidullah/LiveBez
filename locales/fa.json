@@ -117,7 +117,8 @@
         "oddsNotAvailable": "داده‌های ضریب برای این مسابقه در دسترس نیست.",
         "poweredBy": "ارائه شده توسط The Odds API • بهترین قیمت‌ها از بوک‌میکرهای اروپایی",
         "liveAlerts": "هشدارهای زنده",
-        "notifyMe": "خبرم کن"
+        "notifyMe": "خبرم کن",
+        "pageNotFound": "صفحه یافت نشد"
     },
     "predictions": {
         "title": "پیش‌بینی‌های تخصصی",

@@ -22,9 +22,6 @@
     }
   }
 
-  .slow-ticker-animation {
-    animation: scroll 600s linear infinite !important;
-  }
 
   @keyframes fade-up {
     from {
@@ -119,5 +116,9 @@
 @layer utilities {
   .glass {
     @apply backdrop-blur-md bg-white/70 dark:bg-slate-950/70 border border-white/20 dark:border-white/5;
+  }
+
+  .slow-ticker-animation {
+    animation: scroll 600s linear infinite !important;
   }
 }

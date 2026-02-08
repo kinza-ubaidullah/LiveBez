@@ -17,6 +17,7 @@ export default async function PredictionsPage({ params, searchParams }: {
 
     let whereClause: any = {
         date: { gte: new Date() },
+        translations: { some: { languageCode: lang, status: 'PUBLISHED' } },
         prediction: {}
     };
 

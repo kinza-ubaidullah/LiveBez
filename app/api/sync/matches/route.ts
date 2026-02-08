@@ -30,26 +30,35 @@ async function upsertLeague(leagueData: any) {
         } else {
             const languages = await prisma.language.findMany({ where: { isVisible: true } });
 
-            dbLeague = await prisma.league.create({
-                data: {
-                    apiId: apiLeagueId,
-                    country: leagueData.country,
-                    logoUrl: leagueData.logo,
-                    translations: {
-                        create: languages.map(lang => ({
-                            language: { connect: { code: lang.code } },
-                            name: leagueData.name,
-                            slug: `${slug}${lang.code === 'en' ? '' : '-' + lang.code}`,
-                            seo: {
-                                create: {
-                                    title: leagueData.name,
-                                    description: `Betting tips for ${leagueData.name}`
+            try {
+                dbLeague = await prisma.league.create({
+                    data: {
+                        apiId: apiLeagueId,
+                        country: leagueData.country,
+                        logoUrl: leagueData.logo,
+                        translations: {
+                            create: languages.map(lang => ({
+                                language: { connect: { code: lang.code } },
+                                name: leagueData.name,
+                                slug: `${slug}${lang.code === 'en' ? '' : '-' + lang.code}`,
+                                seo: {
+                                    create: {
+                                        title: leagueData.name,
+                                        description: `Betting tips for ${leagueData.name}`
+                                    }
                                 }
-                            }
-                        }))
+                            }))
+                        }
                     }
+                });
+            } catch (error: any) {
+                // Return existing league if race condition occurs (P2002)
+                if (error.code === 'P2002') {
+                    dbLeague = await prisma.league.findUnique({ where: { apiId: apiLeagueId } });
+                } else {
+                    throw error;
                 }
-            });
+            }
         }
     } else {
         if (dbLeague.logoUrl !== leagueData.logo) {
@@ -72,7 +81,7 @@ export async function GET(request: NextRequest) {
 
         try {
             const oddsPromises = soccerLeagues.map(sport =>
-                oddsApi.getOdds(sport, { regions: 'eu', markets: 'h2h,btts,totals' })
+                oddsApi.getOdds(sport, { regions: 'eu', markets: 'h2h' })
                     .then(res => res.data)
                     .catch(() => [])
             );
@@ -261,6 +270,10 @@ export async function GET(request: NextRequest) {
                         underProb: underProbValue,
                     }
                 });
+            } else {
+                // Fetch odds from API if not found in cache
+                // This is a placeholder for waiting for odds fetch to complete
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
 
             syncedCount++;

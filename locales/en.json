@@ -117,7 +117,8 @@
         "oddsNotAvailable": "Odds data not available for this match.",
         "poweredBy": "Powered by The Odds API • Best prices from EU bookmakers",
         "liveAlerts": "Live Alerts",
-        "notifyMe": "Notify Me"
+        "notifyMe": "Notify Me",
+        "pageNotFound": "Page Not Found"
     },
     "predictions": {
         "title": "Expert Predictions",

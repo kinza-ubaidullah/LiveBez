@@ -117,7 +117,8 @@
         "oddsNotAvailable": "بيانات الاحتمالات غير متاحة لهذه المباراة.",
         "poweredBy": "بدعم من The Odds API • أفضل الأسعار من مكاتب المراهنات الأوروبية",
         "liveAlerts": "تنبيهات مباشرة",
-        "notifyMe": "أبلغني"
+        "notifyMe": "أبلغني",
+        "pageNotFound": "الصفحة غير موجودة"
     },
     "predictions": {
         "title": "توقعات الخبراء",
