@@ -11,30 +11,46 @@ export async function updateStaticPage(pageId: string, data: Record<string, { ti
             const langData = data[lang.code];
             if (!langData) continue;
 
-            await prisma.staticPageTranslation.upsert({
+            const existingTrans = await prisma.staticPageTranslation.findUnique({
                 where: {
                     pageId_languageCode: {
                         pageId,
                         languageCode: lang.code
                     }
-                },
-                update: {
-                    title: langData.title,
-                    content: langData.content
-                },
-                create: {
-                    pageId,
-                    languageCode: lang.code,
-                    title: langData.title,
-                    content: langData.content
                 }
             });
+
+            if (existingTrans) {
+                await prisma.staticPageTranslation.update({
+                    where: { id: existingTrans.id },
+                    data: {
+                        title: langData.title,
+                        content: langData.content
+                    }
+                });
+            } else {
+                // Create SEO first
+                const newSeo = await prisma.seoFields.create({
+                    data: {
+                        title: langData.title,
+                        description: langData.title,
+                    }
+                });
+
+                await prisma.staticPageTranslation.create({
+                    data: {
+                        pageId,
+                        languageCode: lang.code,
+                        title: langData.title,
+                        content: langData.content,
+                        seoId: newSeo.id
+                    }
+                });
+            }
         }
 
         revalidatePath("/admin/pages");
-        revalidatePath("/[lang]/about-us", "page");
-        revalidatePath("/[lang]/privacy-policy", "page");
-        revalidatePath("/[lang]/terms-of-service", "page");
+        revalidatePath("/[lang]", "layout");
 
         return { success: true };
     } catch (error: any) {

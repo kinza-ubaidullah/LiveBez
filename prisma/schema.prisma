@@ -39,8 +39,10 @@ model StaticPageTranslation {
   languageCode String
   title        String
   content      String     @db.Text
+  seoId        String?    @unique
   language     Language   @relation(fields: [languageCode], references: [code])
   page         StaticPage @relation(fields: [pageId], references: [id])
+  seo          SeoFields? @relation(fields: [seoId], references: [id])
 
   @@unique([pageId, languageCode])
 }
@@ -73,6 +75,7 @@ model SeoFields {
   leagueTranslation   LeagueTranslation?
   matchTranslation    MatchTranslation?
   teamTranslation     TeamTranslation?
+  staticPageTranslation StaticPageTranslation?
 }
 
 model League {
