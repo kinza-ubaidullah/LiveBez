@@ -73,7 +73,10 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
             <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-10" />
             <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 to-transparent z-10" />
 
-            <div className="flex items-center gap-16 animate-scroll whitespace-nowrap px-10 w-max">
+            <div
+                className="flex items-center gap-16 animate-scroll whitespace-nowrap px-10 w-max"
+                style={{ animationDuration: '600s' }}
+            >
                 {/* Double the list for seamless loop */}
                 {[...matches, ...matches, ...matches].map((match, i) => (
                     <div key={i} className="flex items-center gap-6 group/item cursor-default transition-all duration-300">
