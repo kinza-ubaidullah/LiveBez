@@ -8,6 +8,8 @@ import BookmakersWidget from "@/components/BookmakersWidget";
 import LeaguesSidebar from "@/components/LeaguesSidebar";
 import { Activity, Crown, Trophy } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {

@@ -6,6 +6,8 @@ import AdminHeader from "@/components/admin/AdminHeader";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700", "800", "900"] });
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
     title: "LiveBez CMSuite | Core Management Interface",
     description: "The advanced administrative engine powering the LiveBez sports prediction ecosystem.",

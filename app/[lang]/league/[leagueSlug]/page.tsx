@@ -7,6 +7,8 @@ import { generatePageMetadata } from "@/lib/seo";
 import { apiSports } from "@/lib/sports-api";
 import LeagueStandings from "@/components/LeagueStandings";
 
+export const dynamic = 'force-dynamic';
+
 // Helper to fetch league by slug
 async function getLeagueData(slug: string, lang: string) {
     // 1. Fetch by exact slug in the Translation table

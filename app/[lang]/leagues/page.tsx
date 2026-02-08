@@ -4,6 +4,8 @@ import Image from "next/image";
 import { getDictionary } from "@/lib/i18n";
 import { ArrowRight, Trophy } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function LeaguesPage({ params }: { params: Promise<{ lang: string }> }) {
     const { lang } = await params;
     const t = getDictionary(lang);

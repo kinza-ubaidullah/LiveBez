@@ -8,6 +8,8 @@ import PredictionChart from "@/components/PredictionChart";
 import { getDictionary } from "@/lib/i18n";
 import { apiSports } from "@/lib/sports-api";
 import ShareButtons from "@/components/ShareButtons";
+
+export const dynamic = 'force-dynamic';
 import OddsDisplay from "@/components/OddsDisplay";
 import LiveMatchHeader from "@/components/LiveMatchHeader";
 import NotifyButton from "@/components/NotifyButton";
