@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
         },
         openGraph: {
             title: teamTrans.seo?.ogTitle || teamTrans.seo?.title || teamTrans.name,
-            description: teamTrans.seo?.ogDescription || teamTrans.seo?.description,
+            description: teamTrans.seo?.ogDescription || teamTrans.seo?.description || undefined,
             images: teamTrans.seo?.ogImage ? [teamTrans.seo.ogImage] : []
         }
     };

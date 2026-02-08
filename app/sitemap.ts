@@ -25,7 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             prisma.matchTranslation.findMany({
                 where: {
                     seo: { noIndex: false },
-                    analysis: { not: null, not: "" }
+                    analysis: { not: null }
                 },
                 select: {
                     slug: true,
