@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { updateArticleAction, checkArticleSlugUniqueness } from "@/lib/actions/article-actions";
+import { updateArticleAction, createArticleAction, checkArticleSlugUniqueness } from "@/lib/actions/article-actions";
 import { useRouter } from "next/navigation";
 import TipTapEditor from "./TipTapEditor";
 import ImageUpload from "./ImageUpload";
-
 
 interface SeoFields {
     title: string;
@@ -31,19 +30,24 @@ interface ArticleFormProps {
     article: any;
     languages: any[];
     categories: any[];
+    leagues?: any[];
+    matches?: any[];
 }
 
-export default function ArticleForm({ article, languages, categories }: ArticleFormProps) {
+export default function ArticleForm({ article, languages, categories, leagues = [], matches = [], isNew = false }: ArticleFormProps & { isNew?: boolean }) {
     const router = useRouter();
     const [activeLang, setActiveLang] = useState(languages[0]?.code || 'en');
-    const [categoryId, setCategoryId] = useState(article.categoryId);
-    const [published, setPublished] = useState(article.published);
-    const [featuredImage, setFeaturedImage] = useState(article.featuredImage || "");
+    const [categoryId, setCategoryId] = useState(article?.categoryId || (categories.length > 0 ? categories[0].id : ""));
+    const [leagueId, setLeagueId] = useState(article?.leagueId || "");
+    const [matchId, setMatchId] = useState(article?.matchId || "");
+    const [published, setPublished] = useState(article?.published || false);
+    const [isFeatured, setIsFeatured] = useState(article?.isFeatured || false);
+    const [featuredImage, setFeaturedImage] = useState(article?.featuredImage || "");
 
     const [translations, setTranslations] = useState<Record<string, Translation>>(() => {
         const initial: Record<string, Translation> = {};
         languages.forEach(lang => {
-            const existing = article.translations.find((t: any) => t.languageCode === lang.code);
+            const existing = article?.translations?.find((t: any) => t.languageCode === lang.code);
             initial[lang.code] = {
                 languageCode: lang.code,
                 title: existing?.title || "",
@@ -95,7 +99,7 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
     const validateSlug = async (slug: string) => {
         if (!slug) return;
         setSlugStatus(prev => ({ ...prev, [activeLang]: 'checking' }));
-        const { isUnique } = await checkArticleSlugUniqueness(slug, article.id);
+        const { isUnique } = await checkArticleSlugUniqueness(slug, article?.id);
         setSlugStatus(prev => ({ ...prev, [activeLang]: isUnique ? 'unique' : 'taken' }));
     };
 
@@ -104,19 +108,29 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
         setLoading(true);
         setMessage(null);
 
-        const result = await updateArticleAction(article.id, {
+        const payload = {
             categoryId,
+            leagueId: leagueId === "" ? undefined : leagueId,
+            matchId: matchId === "" ? undefined : matchId,
             published,
+            isFeatured,
             featuredImage,
             translations: Object.values(translations)
-        });
+        };
 
+        const result = isNew
+            ? await createArticleAction(payload)
+            : await updateArticleAction(article.id, payload);
 
         if (result.success) {
-            setMessage({ type: 'success', text: "Article updated successfully!" });
-            router.refresh();
+            setMessage({ type: 'success', text: isNew ? "Article created successfully!" : "Article updated successfully!" });
+            if (isNew && result.id) {
+                router.push(`/admin/articles/${result.id}`);
+            } else {
+                router.refresh();
+            }
         } else {
-            setMessage({ type: 'error', text: result.error || "Failed to update article." });
+            setMessage({ type: 'error', text: result.error || "Failed to process article." });
         }
         setLoading(false);
     };
@@ -150,31 +164,68 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
                     </div>
                 </div>
                 <div className="flex items-center gap-4 sm:gap-6 justify-between sm:justify-end">
-                    <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status:</span>
-                        <button
-                            type="button"
-                            onClick={() => setPublished(!published)}
-                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${published ? 'bg-green-100 dark:bg-green-600/20 text-green-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                                }`}
-                        >
-                            {published ? 'Published' : 'Draft'}
-                        </button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Featured:</span>
+                            <button
+                                type="button"
+                                onClick={() => setIsFeatured(!isFeatured)}
+                                className={`w-10 h-5 rounded-full relative transition-colors ${isFeatured ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}
+                            >
+                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isFeatured ? 'right-1' : 'left-1'}`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status:</span>
+                            <button
+                                type="button"
+                                onClick={() => setPublished(!published)}
+                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${published ? 'bg-green-100 dark:bg-green-600/20 text-green-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                    }`}
+                            >
+                                {published ? 'Published' : 'Draft'}
+                            </button>
+                        </div>
                     </div>
-                    <a
-                        href={`/${activeLang}/blog/${currentTrans.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 text-slate-400 hover:text-blue-600 transition-all bg-slate-50 dark:bg-slate-800 rounded-xl shadow-sm"
-                        title="Preview Page"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                    </a>
                 </div>
             </div>
 
-            {/* Language Tabs - Scrollable on mobile */}
-            <div className="flex overflow-x-auto custom-scrollbar border-b border-slate-200 dark:border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0">
+            {/* Relations Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attach to Competition (League)</label>
+                    <select
+                        value={leagueId}
+                        onChange={(e) => setLeagueId(e.target.value)}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:border-blue-500"
+                    >
+                        <option value="">None (General Article)</option>
+                        {leagues.map(league => (
+                            <option key={league.id} value={league.id}>
+                                {league.translations[0]?.name || league.country}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attach to Specific Match</label>
+                    <select
+                        value={matchId}
+                        onChange={(e) => setMatchId(e.target.value)}
+                        className="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:border-blue-500"
+                    >
+                        <option value="">None (Manual Placement)</option>
+                        {matches.map(match => (
+                            <option key={match.id} value={match.id}>
+                                {match.homeTeam} vs {match.awayTeam} ({new Date(match.date).toLocaleDateString()})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Language Tabs */}
+            <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-800">
                 <div className="flex space-x-2">
                     {languages.map(lang => (
                         <button
@@ -182,7 +233,7 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
                             type="button"
                             onClick={() => setActiveLang(lang.code)}
                             className={`px-6 py-4 font-black text-xs transition-all border-b-2 uppercase tracking-widest whitespace-nowrap mb-[-2px] ${activeLang === lang.code
-                                ? 'border-blue-600 text-blue-600'
+                                ? 'border-primary text-primary'
                                 : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                                 }`}
                         >
@@ -193,7 +244,6 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 xl:gap-12">
-                {/* Main Editor */}
                 <div className="xl:col-span-3 space-y-12">
                     <div className="space-y-4">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Editorial Title</label>
@@ -215,23 +265,14 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
                                     }`}
                                 placeholder="slug-here"
                             />
-                            {slugStatus[activeLang] === 'checking' && <span className="animate-pulse text-blue-500">Checking...</span>}
-                            {slugStatus[activeLang] === 'unique' && <span className="text-emerald-500 font-black italic">✓ Unique</span>}
                         </div>
-                        {slugStatus[activeLang] === 'taken' && <p className="text-[10px] text-red-500 font-black uppercase tracking-widest mt-2">Error: Slug already in use.</p>}
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between ml-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Article Body</label>
-                            <span className="text-[8px] font-bold text-slate-300 uppercase">Interactive Editor</span>
-                        </div>
-                        <div className="min-h-[400px]">
-                            <TipTapEditor
-                                content={currentTrans.content}
-                                onChange={(content) => handleTransChange('content', content)}
-                            />
-                        </div>
+                        <TipTapEditor
+                            content={currentTrans.content}
+                            onChange={(content) => handleTransChange('content', content)}
+                        />
                     </div>
 
                     <div className="space-y-4">
@@ -240,45 +281,21 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
                             value={currentTrans.excerpt}
                             onChange={(e) => handleTransChange('excerpt', e.target.value)}
                             className="w-full p-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-[2rem] outline-none focus:border-blue-300 transition-all font-black text-sm italic text-slate-600 dark:text-slate-400 resize-none h-40 shadow-sm"
-                            placeholder="Briefly describe what this article is about for previews..."
+                            placeholder="Briefly describe what this article is about..."
                         />
                     </div>
                 </div>
 
-                {/* Sidebar SEO */}
                 <div className="space-y-8">
                     <div className="premium-card p-8 bg-slate-900 text-white border-none space-y-8 rounded-[2rem] shadow-2xl">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-black uppercase tracking-[0.2em] italic text-blue-400">Search Preview</h3>
-                                <div className="p-1.5 bg-green-500/20 text-green-400 rounded-lg text-[8px] font-black uppercase tracking-widest">Live Insight</div>
-                            </div>
-                            <div className="p-5 bg-white rounded-2xl text-slate-900 shadow-xl overflow-hidden">
-                                <div className="text-blue-700 font-bold text-sm truncate">{currentTrans.seo.title || currentTrans.title || 'Page Title'}</div>
-                                <div className="text-emerald-700 text-[10px] my-1 font-medium truncate">livebez.com › blog › ...</div>
-                                <div className="text-slate-500 text-[10px] line-clamp-2 leading-relaxed">{currentTrans.seo.description || currentTrans.excerpt || 'Write a meta description to see how it looks here.'}</div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6 pt-6 border-t border-slate-800">
+                        <div className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">SEO Metadata Title</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">SEO Title</label>
                                 <input
                                     type="text"
                                     value={currentTrans.seo.title}
                                     onChange={(e) => handleSeoChange('title', e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Meta Title..."
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">H1 Header Override</label>
-                                <input
-                                    type="text"
-                                    value={currentTrans.seo.h1}
-                                    onChange={(e) => handleSeoChange('h1', e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Leave empty to use title"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-primary transition-all"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -286,50 +303,24 @@ export default function ArticleForm({ article, languages, categories }: ArticleF
                                 <textarea
                                     value={currentTrans.seo.description}
                                     onChange={(e) => handleSeoChange('description', e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 h-32 resize-none transition-all"
-                                    placeholder="Detailed SEO description..."
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-xs font-bold outline-none focus:ring-2 focus:ring-primary h-32 resize-none transition-all"
                                 />
                             </div>
-                            <div className="pt-4">
-                                <button
-                                    disabled={loading}
-                                    className="w-full bg-blue-600 hover:bg-blue-700 p-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all disabled:opacity-50 shadow-xl shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-3"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                            Synchronizing...
-                                        </>
-                                    ) : (
-                                        'Sync & Save Changes'
-                                    )}
-                                </button>
-                            </div>
+                            <button
+                                disabled={loading}
+                                className="w-full bg-primary hover:bg-primary/90 p-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all disabled:opacity-50 shadow-xl shadow-primary/20"
+                            >
+                                {loading ? 'Saving...' : 'Sync & Save'}
+                            </button>
                         </div>
                     </div>
 
                     <div className="premium-card p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Featured Media</h4>
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        </div>
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Featured Image</h4>
                         <ImageUpload
                             value={featuredImage}
                             onChange={(url) => setFeaturedImage(url)}
                         />
-                    </div>
-
-                    <div className="premium-card p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Indexing Suite</h4>
-                        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Robot Indexing</span>
-                            <div
-                                onClick={() => handleSeoChange('noIndex', !currentTrans.seo.noIndex)}
-                                className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${!currentTrans.seo.noIndex ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                            >
-                                <div className={`absolute top-1 bg-white w-4 h-4 rounded-full shadow-lg transition-all ${!currentTrans.seo.noIndex ? 'right-1' : 'left-1'}`} />
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

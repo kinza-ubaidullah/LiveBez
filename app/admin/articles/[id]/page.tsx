@@ -6,7 +6,7 @@ import Link from "next/link";
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
-    const [article, languages, categories] = await Promise.all([
+    const [article, languages, categories, leagues, matches] = await Promise.all([
         prisma.article.findUnique({
             where: { id },
             include: {
@@ -24,12 +24,21 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
                     where: { languageCode: 'en' }
                 }
             }
+        }),
+        prisma.league.findMany({
+            include: {
+                translations: {
+                    where: { languageCode: 'en' }
+                }
+            }
+        }),
+        prisma.match.findMany({
+            take: 50,
+            orderBy: { date: 'desc' }
         })
     ]);
 
     if (!article) notFound();
-
-    const enTranslation = article.translations.find((t: any) => t.languageCode === 'en');
 
     return (
         <div className="max-w-7xl pb-24">
@@ -49,6 +58,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
                 article={article}
                 languages={languages}
                 categories={categories}
+                leagues={leagues}
+                matches={matches}
             />
         </div>
     );

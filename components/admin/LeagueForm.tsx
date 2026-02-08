@@ -22,6 +22,7 @@ interface Translation {
     name: string;
     slug: string;
     description: string;
+    isActive: boolean;
     seo: SeoFields;
 }
 
@@ -46,6 +47,7 @@ export default function LeagueForm({ league, languages, isNew = false }: LeagueF
                 name: existing?.name || "",
                 slug: existing?.slug || "",
                 description: existing?.description || "",
+                isActive: existing?.isActive ?? true,
                 seo: {
                     title: existing?.seo?.title || "",
                     description: existing?.seo?.description || "",
@@ -186,8 +188,8 @@ export default function LeagueForm({ league, languages, isNew = false }: LeagueF
                                             onChange={(e) => handleTransChange('slug', e.target.value)}
                                             onBlur={(e) => validateSlug(e.target.value)}
                                             className={`flex-1 p-4 rounded-xl border bg-slate-50 font-mono text-xs outline-none transition-all ${slugStatus[activeLang] === 'unique' ? 'border-green-500 bg-green-50' :
-                                                    slugStatus[activeLang] === 'taken' ? 'border-red-500 bg-red-50' :
-                                                        'border-slate-100 focus:border-blue-200'
+                                                slugStatus[activeLang] === 'taken' ? 'border-red-500 bg-red-50' :
+                                                    'border-slate-100 focus:border-blue-200'
                                                 }`}
                                             placeholder="premier-league"
                                         />

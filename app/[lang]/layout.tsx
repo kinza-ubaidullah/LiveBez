@@ -26,18 +26,32 @@ export default async function LocaleLayout({
     // Fetch Site Settings & Visible Languages with safe fallbacks
     let settings = null;
     let languages: any[] = [];
+    let topLeagues: any[] = [];
+    let topBookmakers: any[] = [];
 
     try {
-        const [settingsRes, languagesRes] = await Promise.all([
+        const [settingsRes, languagesRes, leaguesRes, bookmakersRes] = await Promise.all([
             prisma.siteSettings?.findFirst() || Promise.resolve(null),
             prisma.language?.findMany({
                 where: { isVisible: true },
                 orderBy: { name: 'asc' }
+            }) || Promise.resolve([]),
+            prisma.league?.findMany({
+                where: { isFeatured: true } as any,
+                include: { translations: { where: { languageCode: lang } } },
+                take: 6
+            }) || Promise.resolve([]),
+            prisma.bookmaker?.findMany({
+                where: { isActive: true } as any,
+                include: { translations: { where: { languageCode: lang } } },
+                orderBy: { rating: 'desc' },
+                take: 5
             }) || Promise.resolve([])
         ]);
         settings = settingsRes;
-        // Exclude Urdu ('ur') as requested by user
-        languages = (languagesRes || []).filter((l: any) => l.code !== 'ur');
+        languages = languagesRes || [];
+        topLeagues = leaguesRes || [];
+        topBookmakers = bookmakersRes || [];
     } catch (error) {
         console.error("Prisma lookup failed in layout.tsx:", error);
     }
@@ -55,12 +69,18 @@ export default async function LocaleLayout({
                 <meta name="description" content={settings?.globalDesc || ""} />
                 <meta name="theme-color" content={brandColor} />
             </head>
-            <body className={`${inter.className} bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-blue-100 selection:text-blue-900`}>
+            <body className={`${inter.className} bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-blue-100 selection:text-blue-900`} suppressHydrationWarning>
                 {settings?.bodyScripts && (
                     <script dangerouslySetInnerHTML={{ __html: settings.bodyScripts }} />
                 )}
                 <ThemeProvider>
-                    <Navbar lang={lang} t={t} languages={languages} />
+                    <Navbar
+                        lang={lang}
+                        t={t}
+                        languages={languages}
+                        leagues={topLeagues}
+                        bookmakers={topBookmakers}
+                    />
 
                     <main className="pt-[80px] xl:pt-[140px] min-h-screen">
                         {children}

@@ -4,10 +4,10 @@ import Link from "next/link";
 export default async function AdminArticlesPage() {
     const articles = await prisma.article.findMany({
         include: {
-            translations: { where: { languageCode: 'en' } },
+            translations: true,
             category: {
                 include: {
-                    translations: { where: { languageCode: 'en' } }
+                    translations: true
                 }
             }
         },
@@ -21,9 +21,9 @@ export default async function AdminArticlesPage() {
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">Content Archive</div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight italic">Articles</h1>
                 </div>
-                <button className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-600/20 active:scale-95">
+                <Link href="/admin/articles/new" className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-600/20 active:scale-95 text-center">
                     + Create Article
-                </button>
+                </Link>
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
@@ -41,13 +41,13 @@ export default async function AdminArticlesPage() {
                             <tr key={article.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                                 <td className="px-8 py-6">
                                     <div className="font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                                        {article.translations[0]?.title || 'Untitled'}
+                                        {article.translations.find(t => t.languageCode === 'en')?.title || article.translations[0]?.title || 'Untitled'}
                                     </div>
                                     <div className="text-[10px] text-slate-400 mt-1 font-medium">{new Date(article.createdAt).toLocaleDateString()}</div>
                                 </td>
                                 <td className="px-8 py-6">
                                     <span className="text-xs font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
-                                        {(article as any).category?.translations[0]?.name || (article as any).category?.key || 'Uncategorized'}
+                                        {article.category.translations.find(t => t.languageCode === 'en')?.name || article.category.translations[0]?.name || article.category.key || 'Uncategorized'}
                                     </span>
                                 </td>
                                 <td className="px-8 py-6">

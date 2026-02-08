@@ -118,5 +118,13 @@
         "poweredBy": "Powered by The Odds API • Best prices from EU bookmakers",
         "liveAlerts": "Live Alerts",
         "notifyMe": "Notify Me"
+    },
+    "predictions": {
+        "title": "Expert Predictions",
+        "homeWin": "Home Win Mastery",
+        "overGoals": "Over 2.5 Goals",
+        "btts": "Both Teams to Score",
+        "noMatches": "No Matches",
+        "noCriteria": "No matches currently meet the algorithmic criteria for this category."
     }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, Target, Info } from "lucide-react";
@@ -34,8 +35,18 @@ interface PredictionCardProps {
 }
 
 export default function PredictionCard({ lang, match }: PredictionCardProps) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const translation = match.translations[0];
     if (!translation) return null;
+
+    const timeString = mounted
+        ? new Date(match.date).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })
+        : "--:--";
 
     // Use the dynamic league slug from the match data
     const leagueSlug = (match as any).league?.translations[0]?.slug || "any";
@@ -66,7 +77,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                         <div className="flex flex-col items-center gap-1 md:gap-2 px-2">
                             <div className="text-2xl md:text-5xl font-black text-slate-200 dark:text-slate-800 italic tracking-tighter opacity-50">VS</div>
                             <div className="px-2 md:px-3 py-0.5 md:py-1 bg-blue-600 text-white text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-blue-600/20 whitespace-nowrap">
-                                {new Date(match.date).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })}
+                                {timeString}
                             </div>
                         </div>
 

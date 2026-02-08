@@ -5,22 +5,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://sports-platform.vercel.app';
 
     try {
-        const [leagues, matches, articles, languages] = await Promise.all([
+        const [leagues, teams, matches, articles, languages] = await Promise.all([
             prisma.leagueTranslation.findMany({
+                where: { seo: { noIndex: false } },
                 select: {
                     slug: true,
                     languageCode: true,
                     league: { select: { updatedAt: true } }
                 }
             }),
+            prisma.teamTranslation.findMany({
+                where: { seo: { noIndex: false } },
+                select: {
+                    slug: true,
+                    languageCode: true,
+                    team: { select: { updatedAt: true } }
+                }
+            }),
             prisma.matchTranslation.findMany({
+                where: {
+                    seo: { noIndex: false },
+                    analysis: { not: null, not: "" }
+                },
                 select: {
                     slug: true,
                     languageCode: true,
                     match: { select: { updatedAt: true, league: { select: { translations: { where: { languageCode: 'en' }, select: { slug: true } } } } } }
                 }
             }),
-            prisma.articleTranslation.findMany({ select: { slug: true, languageCode: true, article: { select: { updatedAt: true } } } }),
+            prisma.articleTranslation.findMany({
+                where: { seo: { noIndex: false } },
+                select: { slug: true, languageCode: true, article: { select: { updatedAt: true } } }
+            }),
             prisma.language.findMany({ where: { isVisible: true }, select: { code: true } })
         ]);
 
@@ -49,6 +65,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 lastModified: l.league?.updatedAt || new Date(),
                 changeFrequency: 'weekly',
                 priority: 0.7,
+            });
+        });
+
+        // Team pages
+        teams.forEach(t => {
+            sitemapEntries.push({
+                url: `${baseUrl}/${t.languageCode}/team/${t.slug}`,
+                lastModified: t.team?.updatedAt || new Date(),
+                changeFrequency: 'weekly',
+                priority: 0.6,
             });
         });
 

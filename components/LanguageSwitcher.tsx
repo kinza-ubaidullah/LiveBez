@@ -10,13 +10,19 @@ export default function LanguageSwitcher({ currentLang, languages }: { currentLa
 
     const handleLanguageChange = (newLang: string) => {
         const pathSegments = pathname.split('/').filter(Boolean);
-        if (pathSegments.length > 0) {
+
+        // If it's a deep page (e.g., /en/league/... or /en/match/...), redirect to new lang home
+        // because slugs are different across languages and will 404.
+        const isDeepPage = pathSegments.length > 2;
+
+        let newPath = `/${newLang}`;
+
+        if (!isDeepPage && pathSegments.length > 1) {
+            // It's a shallow page like /en/leagues or /en/bookmakers, these usually have same slugs or handled by folders
             pathSegments[0] = newLang;
-        } else {
-            pathSegments.push(newLang);
+            newPath = '/' + pathSegments.join('/');
         }
 
-        const newPath = '/' + pathSegments.join('/');
         router.push(newPath);
         setIsOpen(false);
     };

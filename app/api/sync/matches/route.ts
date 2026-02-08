@@ -28,9 +28,7 @@ async function upsertLeague(leagueData: any) {
             });
             dbLeague = await prisma.league.findUnique({ where: { id: existingTrans.leagueId } });
         } else {
-            const seo = await prisma.seoFields.create({
-                data: { title: leagueData.name, description: `Betting tips for ${leagueData.name}` }
-            });
+            const languages = await prisma.language.findMany({ where: { isVisible: true } });
 
             dbLeague = await prisma.league.create({
                 data: {
@@ -38,12 +36,17 @@ async function upsertLeague(leagueData: any) {
                     country: leagueData.country,
                     logoUrl: leagueData.logo,
                     translations: {
-                        create: {
-                            languageCode: 'en',
+                        create: languages.map(lang => ({
+                            language: { connect: { code: lang.code } },
                             name: leagueData.name,
-                            slug: slug,
-                            seoId: seo.id
-                        }
+                            slug: `${slug}${lang.code === 'en' ? '' : '-' + lang.code}`,
+                            seo: {
+                                create: {
+                                    title: leagueData.name,
+                                    description: `Betting tips for ${leagueData.name}`
+                                }
+                            }
+                        }))
                     }
                 }
             });
@@ -63,15 +66,18 @@ export async function GET(request: NextRequest) {
     try {
         let syncedCount = 0;
 
-        // 1. Fetch Odds in background for major leagues
+        // 1. Fetch Odds in background for all major leagues
         let allOdds: any[] = [];
+        const soccerLeagues = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_italy_serie_a', 'soccer_france_ligue_one'];
+
         try {
-            // Fetch both H2H and BTTS
-            const oddsRes = await oddsApi.getOdds('soccer_epl', {
-                regions: 'eu',
-                markets: 'h2h'
-            });
-            allOdds = oddsRes.data;
+            const oddsPromises = soccerLeagues.map(sport =>
+                oddsApi.getOdds(sport, { regions: 'eu', markets: 'h2h,btts,totals' })
+                    .then(res => res.data)
+                    .catch(() => [])
+            );
+            const oddsResults = await Promise.all(oddsPromises);
+            allOdds = oddsResults.flat();
         } catch (e) {
             console.error("Odds fetch failed in sync route:", e);
         }
@@ -109,11 +115,17 @@ export async function GET(request: NextRequest) {
                 where: { apiSportsId: apiMatchId }
             });
 
-            // Find matching odds
-            const matchOdds = allOdds.find(o =>
-                (o.home_team.includes(f.teams.home.name) || f.teams.home.name.includes(o.home_team)) &&
-                (o.away_team.includes(f.teams.away.name) || f.teams.away.name.includes(o.away_team))
-            );
+            // Normalize names for better matching
+            const normalize = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const apiHome = normalize(f.teams.home.name);
+            const apiAway = normalize(f.teams.away.name);
+
+            const matchOdds = allOdds.find(o => {
+                const oddsHome = normalize(o.home_team);
+                const oddsAway = normalize(o.away_team);
+                return (apiHome.includes(oddsHome) || oddsHome.includes(apiHome)) &&
+                    (apiAway.includes(oddsAway) || oddsAway.includes(apiAway));
+            });
 
             let probabilityData = null;
             let bttsProb = null;
@@ -168,9 +180,7 @@ export async function GET(request: NextRequest) {
                 });
                 matchId = existingMatch.id;
             } else {
-                const seoMatch = await prisma.seoFields.create({
-                    data: { title: `${f.teams.home.name} vs ${f.teams.away.name}` }
-                });
+                const languages = await prisma.language.findMany({ where: { isVisible: true } });
 
                 const newMatch = await prisma.match.create({
                     data: {
@@ -187,12 +197,16 @@ export async function GET(request: NextRequest) {
                         awayTeamLogo: f.teams.away.logo,
                         mainTip: probabilityData ? (probabilityData.home > probabilityData.away ? "Home Win" : "Away Win") : "Analysis Pending",
                         translations: {
-                            create: {
-                                languageCode: 'en',
+                            create: languages.map(lang => ({
+                                language: { connect: { code: lang.code } },
                                 name: `${f.teams.home.name} vs ${f.teams.away.name}`,
-                                slug: slug,
-                                seoId: seoMatch.id
-                            }
+                                slug: `${slug}-${lang.code}-${Date.now()}`,
+                                seo: {
+                                    create: {
+                                        title: `${f.teams.home.name} vs ${f.teams.away.name}`
+                                    }
+                                }
+                            }))
                         }
                     }
                 });

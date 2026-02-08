@@ -99,13 +99,11 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                 // Check if match already exists (by API ID stored in a field)
                 const existingMatch = await prisma.match.findFirst({
                     where: {
+                        date: new Date(event.commence_time),
                         homeTeam: event.home_team,
-                        awayTeam: event.away_team,
-                        date: {
-                            gte: new Date(new Date(event.commence_time).getTime() - 3600000), // within 1 hour
-                            lte: new Date(new Date(event.commence_time).getTime() + 3600000),
-                        }
-                    }
+                        awayTeam: event.away_team
+                    },
+                    include: { prediction: true }
                 });
 
                 // Get odds for this event
@@ -114,14 +112,22 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                 const bttsProb = extractBTTSProb(eventOdds);
                 const totalsProb = extractTotalsProb(eventOdds);
 
+                // Find API Logo match
+                const apiMatch = apiSportsFixtures.find(f => isMatch(f.teams.home.name, event.home_team) && isMatch(f.teams.away.name, event.away_team));
+
+                // Ensure Teams exist
+                const [homeTeam, awayTeam] = await Promise.all([
+                    ensureTeam(event.home_team, apiMatch?.teams.home.logo, languages),
+                    ensureTeam(event.away_team, apiMatch?.teams.away.logo, languages)
+                ]);
+
                 if (existingMatch) {
                     // Update existing match with latest odds and logos if missing
-                    const apiMatch = apiSportsFixtures.find(f => isMatch(f.teams.home.name, event.home_team) && isMatch(f.teams.away.name, event.away_team));
 
                     if (h2hOdds) {
                         await prisma.prediction.upsert({
                             where: { matchId: existingMatch.id },
-                            update: {
+                            update: (existingMatch as any).prediction?.isManual ? {} : {
                                 winProbHome: h2hOdds.home,
                                 winProbDraw: h2hOdds.draw,
                                 winProbAway: h2hOdds.away,
@@ -142,14 +148,16 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                     }
 
                     // Update logos if not present
-                    if (apiMatch && (!existingMatch.homeTeamLogo || !existingMatch.awayTeamLogo)) {
+                    if (apiMatch) {
                         await prisma.match.update({
                             where: { id: existingMatch.id },
                             data: {
                                 homeTeamLogo: apiMatch.teams.home.logo,
                                 awayTeamLogo: apiMatch.teams.away.logo,
-                                apiSportsId: apiMatch.fixture.id.toString()
-                            }
+                                apiSportsId: apiMatch.fixture.id.toString(),
+                                homeTeamId: homeTeam.id,
+                                awayTeamId: awayTeam.id
+                            } as any
                         });
                     }
 
@@ -186,6 +194,8 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                             date: new Date(event.commence_time),
                             homeTeam: event.home_team,
                             awayTeam: event.away_team,
+                            homeTeamId: homeTeam.id,
+                            awayTeamId: awayTeam.id,
                             leagueId: league.id,
                             homeTeamLogo: apiMatch?.teams.home.logo,
                             awayTeamLogo: apiMatch?.teams.away.logo,
@@ -216,7 +226,7 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                                     underProb: totalsProb?.under,
                                 }
                             } : undefined
-                        }
+                        } as any
                     });
                     result.created++;
                 }
@@ -461,4 +471,42 @@ function getBestTip(odds: { home: number; draw: number; away: number }): string 
 
 function calculateConfidence(odds: { home: number; draw: number; away: number }): number {
     return Math.max(odds.home, odds.draw, odds.away);
+}
+
+async function ensureTeam(name: string, logo: string | undefined, languages: any[]) {
+    let team = await (prisma as any).team.findFirst({
+        where: {
+            translations: {
+                some: { name: name }
+            }
+        }
+    });
+
+    if (!team) {
+        team = await (prisma as any).team.create({
+            data: {
+                logoUrl: logo,
+                translations: {
+                    create: languages.map(lang => ({
+                        language: { connect: { code: lang.code } },
+                        name: name,
+                        slug: `${name.toLowerCase().replace(/\s+/g, '-')}-${lang.code}-${Date.now()}`,
+                        seo: {
+                            create: {
+                                title: `${name} - Team Profile & Predictions`,
+                                description: `Latest scores, form and predictions for ${name}.`,
+                            } as any
+                        }
+                    }))
+                }
+            }
+        });
+    } else if (logo && !team.logoUrl) {
+        await (prisma as any).team.update({
+            where: { id: team.id },
+            data: { logoUrl: logo }
+        });
+    }
+
+    return team;
 }

@@ -100,7 +100,7 @@ export default function AdminLoginPage() {
                 </form>
 
                 <p className="text-center text-slate-500 text-sm mt-8">
-                    Demo: admin@sportsinfo.com / admin123
+                    Demo: admin@livebaz.com / admin123
                 </p>
             </div>
         </div>

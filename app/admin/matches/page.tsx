@@ -6,7 +6,7 @@ export default async function AdminMatchesPage() {
         include: {
             translations: { where: { languageCode: 'en' } },
             league: {
-                include: { translations: { where: { languageCode: 'en' } } }
+                include: { translations: true }
             }
         }
     });
@@ -18,9 +18,9 @@ export default async function AdminMatchesPage() {
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">Match Center</div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight italic">Upcoming Fixtures</h1>
                 </div>
-                <button className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-600/20 active:scale-95">
+                <Link href="/admin/matches/new" className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-600/20 active:scale-95 text-center">
                     + Register Match
-                </button>
+                </Link>
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden overflow-x-auto">
@@ -44,7 +44,7 @@ export default async function AdminMatchesPage() {
                                 </td>
                                 <td className="px-8 py-6">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
-                                        {match.league.translations[0]?.name || 'N/A'}
+                                        {match.league.translations.find(t => t.languageCode === 'en')?.name || match.league.translations[0]?.name || 'N/A'}
                                     </span>
                                 </td>
                                 <td className="px-8 py-6">

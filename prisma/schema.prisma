@@ -21,6 +21,7 @@ model Language {
   leagueTranslations     LeagueTranslation[]
   matchTranslations      MatchTranslation[]
   predictionTranslations PredictionTranslation[]
+  teamTranslations       TeamTranslation[]
 }
 
 model SiteSettings {
@@ -50,6 +51,7 @@ model SeoFields {
   articleTranslation  ArticleTranslation?
   leagueTranslation   LeagueTranslation?
   matchTranslation    MatchTranslation?
+  teamTranslation     TeamTranslation?
 }
 
 model League {
@@ -57,10 +59,12 @@ model League {
   apiId        String?             @unique
   country      String
   logoUrl      String?
+  isFeatured   Boolean             @default(false)
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
   translations LeagueTranslation[]
   matches      Match[]
+  articles     Article[]
 }
 
 model LeagueTranslation {
@@ -84,6 +88,10 @@ model Match {
   date         DateTime
   homeTeam     String
   awayTeam     String
+  homeTeamId   String?
+  awayTeamId   String?
+  homeTeamRel  Team?              @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamRel  Team?              @relation("AwayTeam", fields: [awayTeamId], references: [id])
   homeScore    Int?
   awayScore    Int?
   leagueId     String
@@ -92,6 +100,7 @@ model Match {
   apiSportsId  String?
   lineups      String?
   stats        String?
+  h2h          String?
   homeTeamLogo String?
   awayTeamLogo String?
   mainTip      String?
@@ -102,21 +111,29 @@ model Match {
   league       League             @relation(fields: [leagueId], references: [id])
   translations MatchTranslation[]
   prediction   Prediction?
+  articles     Article[]
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  REJECTED
 }
 
 model MatchTranslation {
-  id           String    @id @default(cuid())
+  id           String        @id @default(cuid())
   matchId      String
   languageCode String
-  slug         String    @unique
+  slug         String        @unique
   name         String
   content      String?
   analysis     String?
-  isActive     Boolean   @default(true)
-  seoId        String    @unique
-  language     Language  @relation(fields: [languageCode], references: [code])
-  match        Match     @relation(fields: [matchId], references: [id])
-  seo          SeoFields @relation(fields: [seoId], references: [id])
+  status       ContentStatus @default(DRAFT)
+  isActive     Boolean       @default(true)
+  seoId        String        @unique
+  language     Language      @relation(fields: [languageCode], references: [code])
+  match        Match         @relation(fields: [matchId], references: [id])
+  seo          SeoFields     @relation(fields: [seoId], references: [id])
 
   @@unique([matchId, languageCode])
 }
@@ -127,11 +144,12 @@ model Prediction {
   winProbHome  Float
   winProbAway  Float
   winProbDraw  Float
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
   bttsProb     Float?                  @default(50)
   overProb     Float?                  @default(50)
   underProb    Float?                  @default(50)
+  isManual     Boolean                 @default(false)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
   match        Match                   @relation(fields: [matchId], references: [id])
   translations PredictionTranslation[]
 }
@@ -150,11 +168,16 @@ model PredictionTranslation {
 model Article {
   id            String               @id @default(cuid())
   categoryId    String
+  leagueId      String?
+  matchId       String?
   published     Boolean              @default(false)
+  isFeatured    Boolean              @default(false)
   featuredImage String?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   category      ArticleCategory      @relation(fields: [categoryId], references: [id])
+  league        League?              @relation(fields: [leagueId], references: [id])
+  match         Match?               @relation(fields: [matchId], references: [id])
   translations  ArticleTranslation[]
   tags          Tag[]                @relation("ArticleToTag")
 }
@@ -221,6 +244,8 @@ model Bookmaker {
   id           String                 @id @default(cuid())
   logoUrl      String?
   rating       Float                  @default(5.0)
+  isDoFollow   Boolean                @default(false)
+  isActive     Boolean                @default(true)
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
   translations BookmakerTranslation[]
@@ -255,4 +280,31 @@ model PushSubscription {
   userId    String?
   matchId   String?
   createdAt DateTime @default(now())
+}
+
+model Team {
+  id           String            @id @default(cuid())
+  apiId        String?           @unique
+  logoUrl      String?
+  country      String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  translations TeamTranslation[]
+  homeMatches  Match[]           @relation("HomeTeam")
+  awayMatches  Match[]           @relation("AwayTeam")
+}
+
+model TeamTranslation {
+  id           String    @id @default(cuid())
+  teamId       String
+  languageCode String
+  slug         String    @unique
+  name         String
+  description  String?
+  seoId        String    @unique
+  language     Language  @relation(fields: [languageCode], references: [code])
+  team         Team      @relation(fields: [teamId], references: [id])
+  seo          SeoFields @relation(fields: [seoId], references: [id])
+
+  @@unique([teamId, languageCode])
 }

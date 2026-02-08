@@ -1,92 +1,94 @@
-import { getDictionary } from "@/lib/i18n";
 import prisma from "@/lib/db";
 import PredictionCard from "@/components/PredictionCard";
+import { getDictionary } from "@/lib/i18n";
 
-export default async function PredictionsPage({
-    params,
-    searchParams
-}: {
+export default async function PredictionsPage({ params, searchParams }: {
     params: Promise<{ lang: string }>,
-    searchParams: Promise<{ sport?: string, type?: string }>
+    searchParams: Promise<{ cat?: string }>
 }) {
     const { lang } = await params;
-    const { sport, type } = await searchParams;
+    const { cat = 'home' } = await searchParams;
     const t = getDictionary(lang);
 
-    // Build the query
-    const where: any = {
-        translations: { some: { languageCode: lang } }
+    // Categories Logic
+    // cat=home -> winProbHome > winProbAway AND winProbHome > 45%
+    // cat=over -> overProb > 60%
+    // cat=btts -> bttsProb > 60%
+
+    let whereClause: any = {
+        date: { gte: new Date() },
+        prediction: {}
     };
 
-    if (sport === 'football') {
-        // All our current leagues are football
-    } else if (sport === 'basketball') {
-        // We don't have basketball yet, but we'll show empty or handle it
-        where.league = { country: 'USA' }; // Placeholder
-    }
-
-    if (type) {
-        if (type === '1x2') {
-            where.mainTip = { contains: 'Win' }; // Most our 1x2 are "Home Win" etc
-        } else if (type === 'over-under') {
-            where.mainTip = { contains: 'Over' };
-        } else if (type === 'btts') {
-            where.OR = [
-                { mainTip: { contains: 'BTTS' } },
-                { mainTip: 'Analysis Pending' }
-            ];
-        } else if (type === 'top') {
-            where.confidence = { gte: 85 };
-        } else if (type === 'banker') {
-            where.confidence = { gte: 90 };
-        } else if (type === 'results') {
-            where.OR = [
-                { status: 'FINISHED' },
-                { date: { lt: new Date() } }
-            ];
-        }
-    }
-
-    // Default to future matches if not results
-    if (type !== 'results' && !where.OR) {
-        where.date = { gte: new Date() };
+    if (cat === 'home') {
+        whereClause.prediction = {
+            winProbHome: { gt: 45 }
+        };
+    } else if (cat === 'over') {
+        whereClause.prediction = {
+            overProb: { gt: 60 }
+        };
+    } else if (cat === 'btts') {
+        whereClause.prediction = {
+            bttsProb: { gt: 60 }
+        };
     }
 
     const matches = await prisma.match.findMany({
-        where,
+        where: whereClause,
         include: {
             translations: { where: { languageCode: lang } },
-            league: {
-                include: {
-                    translations: { where: { languageCode: lang } }
-                }
-            },
+            league: { include: { translations: { where: { languageCode: lang } } } },
             prediction: true
         },
-        orderBy: { date: 'asc' }
+        orderBy: { date: 'asc' },
+        take: 20
     });
 
-    return (
-        <div className="container mx-auto px-4 py-12 max-w-7xl">
-            <div className="mb-12 text-center">
-                <h1 className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter">
-                    {t.ui.allPredictions}
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                    {t.ui.browseUpcoming}
-                </p>
-            </div>
+    const categories = [
+        { id: 'home', label: t.predictions.homeWin, icon: '🏠' },
+        { id: 'over', label: t.predictions.overGoals, icon: '⚽' },
+        { id: 'btts', label: t.predictions.btts, icon: '🔄' },
+    ];
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {matches.length > 0 ? (
-                    matches.map((match) => (
-                        <PredictionCard key={match.id} lang={lang} match={match} />
-                    ))
-                ) : (
-                    <div className="col-span-full py-20 text-center">
-                        <span className="text-slate-400 font-bold uppercase tracking-widest">{t.ui.noPredictions}</span>
-                    </div>
-                )}
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12">
+            <div className="container mx-auto px-4 lg:px-6">
+                <header className="mb-16">
+                    <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Algorithm Center</div>
+                    <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter italic drop-shadow-sm">
+                        {t.predictions.title.split(' ')[0]} <span className="text-blue-600">{t.predictions.title.split(' ').slice(1).join(' ')}</span>
+                    </h1>
+                </header>
+
+                <div className="flex flex-wrap gap-4 mb-12">
+                    {categories.map((c) => (
+                        <a
+                            key={c.id}
+                            href={`/${lang}/predictions?cat=${c.id}`}
+                            className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-3 ${cat === c.id
+                                ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/20 scale-105'
+                                : 'bg-white dark:bg-slate-900 text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-blue-500 hover:text-blue-600'
+                                }`}
+                        >
+                            <span>{c.icon}</span>
+                            {c.label}
+                        </a>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                    {matches.length > 0 ? (
+                        matches.map(match => (
+                            <PredictionCard key={match.id} lang={lang} match={match as any} />
+                        ))
+                    ) : (
+                        <div className="py-32 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+                            <div className="text-slate-200 dark:text-slate-800 font-black text-6xl uppercase italic tracking-widest opacity-30 mb-4">{t.predictions.noMatches}</div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t.predictions.noCriteria}</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

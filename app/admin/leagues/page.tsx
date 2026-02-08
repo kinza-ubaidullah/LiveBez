@@ -1,11 +1,13 @@
 import prisma from "@/lib/db";
 import Link from "next/link";
+import LeagueFeaturedToggle from "@/components/admin/LeagueFeaturedToggle";
 
 export default async function AdminLeaguesPage() {
     const leagues = await prisma.league.findMany({
         include: {
-            translations: { where: { languageCode: 'en' } }
-        }
+            translations: true
+        },
+        orderBy: { country: 'asc' }
     });
 
     return (
@@ -14,7 +16,7 @@ export default async function AdminLeaguesPage() {
                 <div className="flex-1">
                     <div className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 mb-2">Competition Management</div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter italic">Football Leagues</h1>
-                    <p className="text-slate-500 text-sm mt-4 max-w-2xl">Manage global competitions, their localized names, and SEO parameters. Content here drives the main navigation and league-specific landing pages.</p>
+                    <p className="text-slate-500 text-sm mt-4 max-w-2xl">Manage global competitions. "Featured" leagues appear in the website's main navbar dropdown.</p>
                 </div>
 
                 <Link href="/admin/leagues/new" className="w-full md:w-auto bg-blue-600 text-white px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] text-center hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95">
@@ -26,7 +28,8 @@ export default async function AdminLeaguesPage() {
                 <table className="w-full text-left min-w-[700px]">
                     <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
                         <tr>
-                            <th className="px-8 py-6">Competition Name</th>
+                            <th className="px-8 py-6">Featured</th>
+                            <th className="px-8 py-6">Competition</th>
                             <th className="px-8 py-6">Country</th>
                             <th className="px-8 py-6">Slug Hierarchy</th>
                             <th className="px-8 py-6 text-right">Actions</th>
@@ -36,8 +39,11 @@ export default async function AdminLeaguesPage() {
                         {leagues.map((league) => (
                             <tr key={league.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/50 transition-all group">
                                 <td className="px-8 py-6">
+                                    <LeagueFeaturedToggle leagueId={league.id} initialStatus={(league as any).isFeatured} />
+                                </td>
+                                <td className="px-8 py-6">
                                     <div className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tighter italic group-hover:text-blue-600 transition-colors">
-                                        {league.translations[0]?.name || 'Unnamed League'}
+                                        {league.translations.find(t => t.languageCode === 'en')?.name || league.translations[0]?.name || 'Unnamed League'}
                                     </div>
                                 </td>
                                 <td className="px-8 py-6">

@@ -11,6 +11,8 @@ import ShareButtons from "@/components/ShareButtons";
 import OddsDisplay from "@/components/OddsDisplay";
 import LiveMatchHeader from "@/components/LiveMatchHeader";
 import NotifyButton from "@/components/NotifyButton";
+import MatchTabs from "@/components/MatchTabs";
+import { getFullMatchDetails } from "@/lib/match-service";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string, leagueSlug: string, matchSlug: string }> }) {
     const { lang, matchSlug } = await params;
@@ -76,8 +78,41 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
         return tip;
     };
 
+    const matchData = await getFullMatchDetails(match.id, match.apiSportsId);
+    const stats = matchData?.stats || null;
+    const lineups = matchData?.lineups || null;
+    const h2h = (matchData as any)?.h2h || null;
+
+    // Structured Data (JSON-LD)
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "SportsEvent",
+        "name": `${match.homeTeam} vs ${match.awayTeam}`,
+        "description": finalTrans.seo?.description || `Match prediction and analysis for ${match.homeTeam} vs ${match.awayTeam}`,
+        "startDate": match.date,
+        "homeTeam": {
+            "@type": "SportsTeam",
+            "name": match.homeTeam,
+            "logo": match.homeTeamLogo
+        },
+        "awayTeam": {
+            "@type": "SportsTeam",
+            "name": match.awayTeam,
+            "logo": match.awayTeamLogo
+        },
+        "location": {
+            "@type": "Place",
+            "name": match.league.country
+        },
+        "eventStatus": match.status === 'FINISHED' ? "https://schema.org/EventScheduled" : "https://schema.org/EventScheduled"
+    };
+
     return (
         <div className="bg-[#f0f4f8] dark:bg-slate-950 min-h-screen">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <LiveMatchHeader
                 matchId={match.id}
                 initialData={{
@@ -89,7 +124,8 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                     homeTeam: match.homeTeam,
                     awayTeam: match.awayTeam,
                     homeTeamLogo: match.homeTeamLogo,
-                    awayTeamLogo: match.awayTeamLogo
+                    awayTeamLogo: match.awayTeamLogo,
+                    prediction: match.prediction
                 }}
                 lang={lang}
                 t={t}
@@ -98,9 +134,9 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
             <div className="container mx-auto px-4 lg:px-6 py-12">
                 {/* Breadcrumbs */}
                 <nav className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-12 overflow-x-auto whitespace-nowrap pb-4">
-                    <Link href={`/${lang}`} className="hover:text-primary transition-colors">Home</Link>
+                    <Link href={`/${lang}`} className="hover:text-primary transition-colors">{t.nav.home}</Link>
                     <span>/</span>
-                    <Link href={`/${lang}/leagues`} className="hover:text-primary transition-colors">Leagues</Link>
+                    <Link href={`/${lang}/leagues`} className="hover:text-primary transition-colors">{t.footer.leagues}</Link>
                     <span>/</span>
                     <Link href={`/${lang}/league/${leagueSlug}`} className="hover:text-primary transition-colors">{leagueName}</Link>
                     <span>/</span>
@@ -110,37 +146,14 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                     {/* Main Content */}
                     <div className="lg:col-span-8 space-y-12">
-
-                        {/* Analysis Card */}
-                        <div className="premium-card p-10 relative overflow-hidden group border-none bg-white">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-3xl rounded-full -mr-32 -mt-32" />
-
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-1.5 h-8 bg-primary rounded-full" />
-                                    <div>
-                                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">Expert Preview</div>
-                                        <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">Match Analysis</h2>
-                                    </div>
-                                </div>
-
-                                <div className="prose prose-slate dark:prose-invert max-w-none prose-p:text-slate-600 dark:prose-p:text-slate-400 prose-p:leading-relaxed prose-headings:font-black prose-headings:italic prose-headings:tracking-tighter prose-strong:text-primary prose-a:text-primary hover:prose-a:underline">
-                                    {finalTrans.analysis ? (
-                                        <div dangerouslySetInnerHTML={{ __html: finalTrans.analysis }} />
-                                    ) : (
-                                        <p className="italic text-slate-400 text-lg">Detailed tactical analysis and expert insights for this match are being compiled by our scouts. Stay tuned for the full breakdown.</p>
-                                    )}
-                                </div>
-
-                                <div className="mt-12 flex flex-wrap items-center gap-8 border-t border-slate-100 dark:border-slate-800 pt-10">
-                                    <ShareButtons title={finalTrans.name} />
-                                    <div className="w-px h-8 bg-slate-100 hidden md:block" />
-                                    <div className="flex-1 max-w-xs">
-                                        <NotifyButton label="Get Live Score Alerts" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <MatchTabs
+                            stats={stats}
+                            lineups={lineups}
+                            h2h={h2h}
+                            analysis={matchTrans.status === 'PUBLISHED' ? matchTrans.analysis : null}
+                            lang={lang}
+                            t={t}
+                        />
 
                         {/* Odds Comparison */}
                         <div className="space-y-4">
@@ -152,30 +165,6 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                             </div>
                             <OddsDisplay homeTeam={match.homeTeam} awayTeam={match.awayTeam} t={t} />
                         </div>
-
-                        {/* Lineups & Stats */}
-                        {(match.lineups || match.stats) && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {match.lineups && (
-                                    <div className="premium-card p-8 bg-white border-none">
-                                        <h3 className="text-xl font-black italic mb-6 flex items-center gap-3">
-                                            <div className="w-2 h-2 bg-primary rounded-full" />
-                                            Starting Eleven
-                                        </h3>
-                                        <pre className="text-xs font-sans text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{match.lineups}</pre>
-                                    </div>
-                                )}
-                                {match.stats && (
-                                    <div className="premium-card p-8 bg-white border-none">
-                                        <h3 className="text-xl font-black italic mb-6 flex items-center gap-3">
-                                            <div className="w-2 h-2 bg-red-500 rounded-full" />
-                                            Match Metrics
-                                        </h3>
-                                        <pre className="text-xs font-sans text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{match.stats}</pre>
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
 
                     {/* Sidebar */}

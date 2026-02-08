@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🧹 Cleaning database...');
     // Order matters for deletion due to relations
+    await prisma.bookmakerTranslation.deleteMany({});
+    await prisma.bookmaker.deleteMany({});
     await prisma.predictionTranslation.deleteMany({});
     await prisma.articleTranslation.deleteMany({});
     await prisma.articleCategoryTranslation.deleteMany({});
@@ -19,8 +21,6 @@ async function main() {
     await prisma.league.deleteMany({});
     await prisma.language.deleteMany({});
     await prisma.adminUser.deleteMany({});
-    await prisma.bookmakerTranslation.deleteMany({});
-    await prisma.bookmaker.deleteMany({});
 
     // Create Admin User
     console.log('👤 Creating Admin User...');
@@ -38,6 +38,7 @@ async function main() {
     console.log('🌐 Creating Languages...');
     await prisma.language.create({ data: { code: 'en', name: 'English', isVisible: true } });
     await prisma.language.create({ data: { code: 'ar', name: 'Arabic', isVisible: true } });
+    await prisma.language.create({ data: { code: 'fa', name: 'Persian', isVisible: true } });
 
     // ========== CATEGORIES ==========
     console.log('📁 Creating Article Categories...');
@@ -48,6 +49,8 @@ async function main() {
     await prisma.articleCategoryTranslation.create({ data: { categoryId: catAnalysis.id, languageCode: 'en', name: 'Analysis', slug: 'analysis', seoId: catAnalysisSeoEn.id } });
     const catAnalysisSeoAr = await prisma.seoFields.create({ data: { title: 'تحليل كرة القدم', description: 'تحليلات عميقة وتكتيكية.' } });
     await prisma.articleCategoryTranslation.create({ data: { categoryId: catAnalysis.id, languageCode: 'ar', name: 'تحليل', slug: 'analysis-ar', seoId: catAnalysisSeoAr.id } });
+    const catAnalysisSeoFa = await prisma.seoFields.create({ data: { title: 'تحلیل فوتبال', description: 'تجزیه و تحلیل عمیق و تاکتیکی.' } });
+    await prisma.articleCategoryTranslation.create({ data: { categoryId: catAnalysis.id, languageCode: 'fa', name: 'تحلیل', slug: 'analysis-fa', seoId: catAnalysisSeoFa.id } });
 
     // Transfer Category
     const catTransfer = await prisma.articleCategory.create({ data: { key: 'transfer' } });

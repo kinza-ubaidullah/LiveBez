@@ -94,11 +94,32 @@ class ApiSportsClient {
     /**
      * Get league standings
      */
-    /**
-     * Get league standings
-     */
-    async getStandings(leagueId: string, season: string = '2025'): Promise<any[]> {
+    async getStandings(leagueId: string, season: string = '2024'): Promise<any[]> {
         const response = await this.request<any[]>('/standings', { league: leagueId, season }, 86400); // 24hr cache
+        return response.response;
+    }
+
+    /**
+     * Get lineups for a fixture
+     */
+    async getLineups(fixtureId: string): Promise<any[]> {
+        const response = await this.request<any[]>('/fixtures/lineups', { fixture: fixtureId }, 3600);
+        return response.response;
+    }
+
+    /**
+     * Get statistics for a fixture
+     */
+    async getFixtureStatistics(fixtureId: string): Promise<any[]> {
+        const response = await this.request<any[]>('/fixtures/statistics', { fixture: fixtureId }, 60);
+        return response.response;
+    }
+
+    /**
+     * Get head to head records between two teams
+     */
+    async getH2H(team1Id: string, team2Id: string): Promise<any[]> {
+        const response = await this.request<any[]>('/fixtures/headtohead', { h2h: `${team1Id}-${team2Id}`, last: '10' }, 86400);
         return response.response;
     }
 }
@@ -110,8 +131,6 @@ export const apiSports = new ApiSportsClient();
  */
 export async function fetchLiveScore(matchId: string): Promise<MatchScore | null> {
     try {
-        // matchId here might be internal DB ID or API-Sports ID
-        // Assuming we store api-sports-id in the match model
         const fixture = await apiSports.getFixture(matchId);
         if (!fixture) return null;
 
