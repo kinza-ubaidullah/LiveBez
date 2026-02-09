@@ -71,14 +71,21 @@ export default function TopBar({ lang, languages }: TopBarProps) {
                         </div>
 
                         {/* Login */}
-                        <button
-                            onClick={() => setIsLoginOpen(true)}
-                            suppressHydrationWarning
-                            className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors"
-                        >
-                            <LogIn className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Log in</span>
-                        </button>
+                        <div className="flex items-center gap-4 border-l border-white/10 pl-8">
+                            <button
+                                onClick={() => setIsLoginOpen(true)}
+                                className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                            >
+                                <LogIn className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-black uppercase tracking-widest italic">Login</span>
+                            </button>
+                            <button
+                                onClick={() => setIsRegisterOpen(true)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest italic transition-all shadow-lg shadow-blue-600/20"
+                            >
+                                Join Now
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Search, Trophy, Star } from "lucide-react";
+import SmartLogo from "./SmartLogo";
 
 interface League {
     id: string;
@@ -37,11 +38,13 @@ export default function LeaguesSidebar({ lang, leagues = [] }: { lang: string, l
                                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group"
                             >
                                 <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-1.5 overflow-hidden">
-                                    {league.logoUrl ? (
-                                        <img src={league.logoUrl} alt={league.translations[0]?.name} className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all" />
-                                    ) : (
-                                        <Trophy className="w-4 h-4 text-slate-400" />
-                                    )}
+                                    <SmartLogo
+                                        src={league.logoUrl}
+                                        alt={league.translations[0]?.name || "League"}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-contain grayscale group-hover:grayscale-0 transition-all"
+                                    />
                                 </div>
                                 <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">
                                     {league.translations[0]?.name}

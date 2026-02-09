@@ -57,6 +57,9 @@
 
   --shadow-premium: 0 10px 40px -10px rgba(0, 82, 255, 0.05);
   --shadow-premium-hover: 0 20px 60px -12px rgba(0, 82, 255, 0.12);
+
+  --font-outfit: var(--font-outfit);
+  --font-inter: var(--font-inter);
 }
 
 @layer base {
@@ -109,7 +112,7 @@
   }
 
   .h-display {
-    @apply text-4xl md:text-7xl font-black tracking-tighter leading-none text-slate-900 dark:text-white;
+    @apply text-4xl md:text-7xl font-black tracking-tighter leading-none text-slate-900 dark:text-white font-outfit;
   }
 }
 

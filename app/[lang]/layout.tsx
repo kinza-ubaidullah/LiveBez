@@ -1,6 +1,6 @@
 import prisma from "@/lib/db";
 import "../globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import Link from "next/link";
 import Image from "next/image";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -9,8 +9,18 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 import Navbar from "@/components/Navbar";
 import { Shield } from "lucide-react";
+import { Toaster } from "react-hot-toast";
 
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "700", "800", "900"] });
+const inter = Inter({
+    subsets: ["latin"],
+    variable: '--font-inter',
+});
+
+const outfit = Outfit({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700", "800", "900"],
+    variable: '--font-outfit',
+});
 
 export default async function LocaleLayout({
     children,
@@ -69,11 +79,12 @@ export default async function LocaleLayout({
                 <meta name="description" content={settings?.globalDesc || ""} />
                 <meta name="theme-color" content={brandColor} />
             </head>
-            <body className={`${inter.className} bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-blue-100 selection:text-blue-900`} suppressHydrationWarning>
+            <body className={`${inter.variable} ${outfit.variable} font-inter bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors selection:bg-blue-100 selection:text-blue-900`} suppressHydrationWarning>
                 {settings?.bodyScripts && (
                     <script dangerouslySetInnerHTML={{ __html: settings.bodyScripts }} />
                 )}
                 <ThemeProvider>
+                    <Toaster position="top-center" />
                     <Navbar
                         lang={lang}
                         t={t}

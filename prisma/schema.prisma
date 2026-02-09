@@ -258,6 +258,20 @@ model AdminUser {
   updatedAt DateTime @updatedAt
 }
 
+model AppUser {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  password           String
+  name               String?
+  emailVerified      DateTime?
+  image              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  verificationCode   String?
+  verificationExpiry DateTime?
+  isVerified         Boolean   @default(false)
+}
+
 model Bookmaker {
   id           String                 @id @default(cuid())
   logoUrl      String?

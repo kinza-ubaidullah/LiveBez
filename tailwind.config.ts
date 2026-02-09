@@ -16,6 +16,10 @@ const config: Config = {
                     foreground: "#ffffff",
                 },
             },
+            fontFamily: {
+                outfit: ["var(--font-outfit)", "sans-serif"],
+                inter: ["var(--font-inter)", "sans-serif"],
+            },
         },
     },
     plugins: [],

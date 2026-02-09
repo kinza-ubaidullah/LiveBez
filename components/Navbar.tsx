@@ -13,6 +13,7 @@ import { useTheme } from "./ThemeProvider";
 import { useRouter, usePathname } from "next/navigation";
 import LoginModal from "./auth/LoginModal";
 import RegisterModal from "./auth/RegisterModal";
+import SmartLogo from "./SmartLogo";
 
 interface NavbarProps {
     lang: string;
@@ -107,11 +108,13 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
                     <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Popular Leagues</h4>
                     {leagues.length > 0 ? leagues.map((league) => (
                         <Link key={league.id} href={`/${lang}/league/${league.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-all group">
-                            {league.logoUrl ? (
-                                <Image src={league.logoUrl} alt={league.translations[0]?.name || "League"} width={20} height={20} className="object-contain" />
-                            ) : (
-                                <Trophy className="w-4 h-4 text-slate-400" />
-                            )}
+                            <SmartLogo
+                                src={league.logoUrl}
+                                alt={league.translations[0]?.name || "League"}
+                                width={20}
+                                height={20}
+                                className="object-contain"
+                            />
                             <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter group-hover:text-blue-600 transition-colors italic">
                                 {league.translations[0]?.name || league.country}
                             </span>
@@ -139,7 +142,7 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
                         <Link key={bm.id} href={`/${lang}/bookmakers`} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-all group border border-transparent hover:border-blue-100 dark:hover:border-blue-900/30">
                             <div className="flex items-center gap-4">
                                 <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center relative overflow-hidden">
-                                    {bm.logoUrl ? <Image src={bm.logoUrl} alt="logo" fill className="object-contain p-1" /> : <Shield className="w-4 h-4 text-slate-400" />}
+                                    <SmartLogo src={bm.logoUrl} alt={bm.translations[0]?.name || "logo"} width={24} height={24} className="p-1" />
                                 </div>
                                 <div>
                                     <div className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">{bm.translations[0]?.name}</div>

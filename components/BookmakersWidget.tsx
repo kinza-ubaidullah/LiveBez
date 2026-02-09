@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import Image from "next/image";
+import SmartLogo from "./SmartLogo";
 import Link from "next/link";
 import { getDictionary } from "@/lib/i18n";
 
@@ -52,20 +52,13 @@ export default async function BookmakersWidget({ lang }: BookmakersWidgetProps) 
                             >
                                 <div className="flex items-center gap-5 mb-6">
                                     <div className="w-16 h-16 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center p-3 flex-shrink-0 border border-slate-100 dark:border-slate-600 shadow-sm transition-transform group-hover:scale-105">
-                                        {bm.logoUrl ? (
-                                            <Image
-                                                src={bm.logoUrl}
-                                                alt={trans.name}
-                                                width={60}
-                                                height={60}
-                                                className="object-contain"
-                                                unoptimized={bm.logoUrl.endsWith('.png') || bm.logoUrl.endsWith('.svg')}
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-blue-600 font-black text-xl">
-                                                {trans.name.charAt(0)}
-                                            </div>
-                                        )}
+                                        <SmartLogo
+                                            src={bm.logoUrl}
+                                            alt={trans.name}
+                                            width={60}
+                                            height={60}
+                                            className="object-contain"
+                                        />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1.5">

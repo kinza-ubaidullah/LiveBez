@@ -27,3 +27,16 @@ export async function uploadImage(file: File): Promise<string> {
         ).end(buffer);
     });
 }
+
+export async function uploadFromUrl(url: string, folder: string = 'livebez'): Promise<string> {
+    try {
+        const result = await cloudinary.uploader.upload(url, {
+            folder: folder,
+            resource_type: 'auto',
+        });
+        return result.secure_url;
+    } catch (error) {
+        console.error('Cloudinary upload from URL error:', error);
+        throw error;
+    }
+}

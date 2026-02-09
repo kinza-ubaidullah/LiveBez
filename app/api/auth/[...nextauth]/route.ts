@@ -16,26 +16,45 @@ export const authOptions = {
                     return null;
                 }
 
-                const user = await prisma.adminUser.findUnique({
+                // First try to find regular user
+                const user = await (prisma as any).appUser.findUnique({
                     where: { email: credentials.email }
                 });
 
-                if (!user || !user.password) {
-                    return null;
+                if (user) {
+                    if (!user.isVerified) {
+                        throw new Error("PLEASE_VERIFY");
+                    }
+
+                    const isValid = await bcrypt.compare(credentials.password, user.password);
+                    if (isValid) {
+                        return {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            role: "USER",
+                        };
+                    }
                 }
 
-                const isValid = await bcrypt.compare(credentials.password, user.password);
+                // If not found or invalid, try admin user
+                const admin = await prisma.adminUser.findUnique({
+                    where: { email: credentials.email }
+                });
 
-                if (!isValid) {
-                    return null;
+                if (admin) {
+                    const isValid = await bcrypt.compare(credentials.password, admin.password);
+                    if (isValid) {
+                        return {
+                            id: admin.id,
+                            email: admin.email,
+                            name: admin.name,
+                            role: admin.role,
+                        };
+                    }
                 }
 
-                return {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                };
+                return null;
             }
         })
     ],
