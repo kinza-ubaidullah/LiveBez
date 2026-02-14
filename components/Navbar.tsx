@@ -204,7 +204,12 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
                     <div className="flex items-center gap-4">
                         <div className="relative group hidden lg:block">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600" />
-                            <input type="text" placeholder="Search..." className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-12 pr-6 text-xs font-bold outline-none focus:border-blue-500 transition-all w-48 focus:w-64" />
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                suppressHydrationWarning
+                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl py-2 pl-12 pr-6 text-xs font-bold outline-none focus:border-blue-500 transition-all w-48 focus:w-64"
+                            />
                         </div>
                         <button onClick={() => setIsMenuOpen(true)} className="xl:hidden p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl">
                             <Menu className="w-5 h-5 text-slate-600 dark:text-slate-300" />

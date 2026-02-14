@@ -5,6 +5,7 @@ import StatsTab from "@/components/match-tabs/StatsTab";
 import H2HTab from "@/components/match-tabs/H2HTab";
 import LineupsTab from "@/components/match-tabs/LineupsTab";
 import AnalysisTab from "@/components/match-tabs/AnalysisTab";
+import ComparisonTab from "@/components/match-tabs/ComparisonTab";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -16,26 +17,29 @@ interface MatchTabsProps {
     stats: string | null;
     lineups: string | null;
     h2h: string | null;
+    comparison: string | null;
+    predictionsFull: string | null;
     analysis: string | null;
     lang: string;
     t: any;
 }
 
-export default function MatchTabs({ stats, lineups, h2h, analysis, lang, t }: MatchTabsProps) {
-    const [activeTab, setActiveTab] = useState("analysis");
-
+export default function MatchTabs({ stats, lineups, h2h, comparison, predictionsFull, analysis, lang, t }: MatchTabsProps) {
     const hasLineups = !!lineups && lineups !== "null" && lineups !== "[]";
     const hasStats = !!stats && stats !== "null" && stats !== "[]";
     const hasH2H = !!h2h && h2h !== "null" && h2h !== "[]";
+    const hasComparison = !!comparison && comparison !== "null";
 
     const allTabs = [
         { id: "analysis", label: t.match.expertAnalysis || "Analysis", show: !!analysis },
-        { id: "stats", label: t.match.stats || "Stats", show: hasStats },
+        { id: "comparison", label: "Comparison", show: hasComparison },
+        { id: "stats", label: t.match.stats || "Live Stats", show: hasStats },
         { id: "h2h", label: "H2H", show: hasH2H },
         { id: "lineups", label: t.match.lineups || "Lineups", show: hasLineups },
     ];
 
     const activeTabs = allTabs.filter(t => t.show);
+    const [activeTab, setActiveTab] = useState(activeTabs[0]?.id || "analysis");
 
     return (
         <div className="space-y-8">
@@ -48,7 +52,7 @@ export default function MatchTabs({ stats, lineups, h2h, analysis, lang, t }: Ma
                         className={cn(
                             "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap",
                             activeTab === tab.id
-                                ? "bg-white dark:bg-slate-800 text-primary shadow-lg shadow-primary/5"
+                                ? "bg-white dark:bg-slate-800 text-blue-600 shadow-lg"
                                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                         )}
                     >
@@ -58,12 +62,11 @@ export default function MatchTabs({ stats, lineups, h2h, analysis, lang, t }: Ma
             </div>
 
             <div className="min-h-[400px]">
-                {/* 
-                  SE0 REFACTOR: We render all tab contents in the DOM but control visibility via CSS.
-                  This ensures search engines can index all the data while maintaining a clean UI.
-                */}
                 <div className={activeTab === "analysis" ? "block" : "hidden"}>
                     <AnalysisTab content={analysis} />
+                </div>
+                <div className={activeTab === "comparison" ? "block" : "hidden"}>
+                    <ComparisonTab comparisonJson={comparison} predictionsFullJson={predictionsFull} />
                 </div>
                 <div className={activeTab === "stats" ? "block" : "hidden"}>
                     <StatsTab statsJson={stats} />

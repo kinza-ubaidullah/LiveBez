@@ -4,6 +4,18 @@ import Link from "next/link";
 import { getDictionary } from "@/lib/i18n";
 import { Star, Shield, ExternalLink, CheckCircle } from "lucide-react";
 
+import { generatePageMetadata } from "@/lib/seo";
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
+    const { lang } = await params;
+    const settings = await prisma.siteSettings.findFirst();
+
+    return {
+        title: `Top Bookmakers & Bonus Deals | ${settings?.siteName || "LiveBaz"}`,
+        description: "Compare the best sports betting platforms, claim exclusive welcome bonuses, and find trusted bookmakers with high odds.",
+    };
+}
+
 export default async function BookmakersPage({ params }: { params: Promise<{ lang: string }> }) {
     const { lang } = await params;
     const t = getDictionary(lang);
@@ -11,7 +23,8 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
     const bookmakers = await prisma.bookmaker.findMany({
         include: {
             translations: {
-                where: { languageCode: lang }
+                where: { languageCode: lang },
+                include: { seo: true }
             }
         },
         orderBy: { rating: 'desc' }
@@ -30,7 +43,7 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
 
             <div className="space-y-6">
                 {bookmakers.map((bm, index) => {
-                    const trans = bm.translations[0];
+                    const trans = (bm as any).translations[0];
                     if (!trans) return null;
 
                     return (

@@ -26,8 +26,16 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
             initial[lang.code] = {
                 languageCode: lang.code,
                 name: existing?.name || "",
+                slug: existing?.slug || "",
                 bonusText: existing?.bonusText || "",
+                sampleOdds: existing?.sampleOdds || "",
+                description: existing?.description || "",
                 affiliateUrl: existing?.affiliateUrl || "",
+                seo: {
+                    title: existing?.seo?.title || "",
+                    description: existing?.seo?.description || "",
+                    canonical: existing?.seo?.canonical || "",
+                }
             };
         });
         return initial;
@@ -40,6 +48,16 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
         setTranslations(prev => ({
             ...prev,
             [activeLang]: { ...prev[activeLang], [field]: value }
+        }));
+    };
+
+    const handleSeoChange = (field: string, value: any) => {
+        setTranslations(prev => ({
+            ...prev,
+            [activeLang]: {
+                ...prev[activeLang],
+                seo: { ...prev[activeLang].seo, [field]: value }
+            }
         }));
     };
 
@@ -59,7 +77,7 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
             if (!bookmaker?.id) router.push('/admin/bookmakers');
             else router.refresh();
         } else {
-            setMessage({ type: 'error', text: result.error });
+            setMessage({ type: 'error', text: result.error || "Operation failed" });
         }
         setLoading(false);
     };
@@ -98,6 +116,17 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
                                 onChange={(e) => handleTransChange('name', e.target.value)}
                                 className="w-full text-4xl font-black text-slate-900 border-none outline-none placeholder:text-slate-100 uppercase italic tracking-tighter"
                                 placeholder="e.g. 1XBET"
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">URL Slug</label>
+                            <input
+                                type="text"
+                                value={currentTrans.slug}
+                                onChange={(e) => handleTransChange('slug', e.target.value)}
+                                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-mono text-xs text-slate-600 outline-none focus:border-emerald-500"
+                                placeholder="bookmaker-slug"
                             />
                         </div>
 
@@ -142,6 +171,38 @@ export default function BookmakerForm({ bookmaker, languages }: BookmakerFormPro
                                 className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-mono text-xs text-blue-600 outline-none focus:border-emerald-500"
                                 placeholder="https://tracking.partner.com/click?ai=..."
                             />
+                        </div>
+
+                        <div className="pt-8 border-t border-slate-100 space-y-6">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">SEO Configuration</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta Title</label>
+                                    <input
+                                        type="text"
+                                        value={currentTrans.seo.title}
+                                        onChange={(e) => handleSeoChange('title', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:border-emerald-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Canonical URL</label>
+                                    <input
+                                        type="text"
+                                        value={currentTrans.seo.canonical}
+                                        onChange={(e) => handleSeoChange('canonical', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:border-emerald-500"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta Description</label>
+                                    <textarea
+                                        value={currentTrans.seo.description}
+                                        onChange={(e) => handleSeoChange('description', e.target.value)}
+                                        className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:border-emerald-500 h-20 resize-none"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

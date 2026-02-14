@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import Link from "next/link";
+import GenerateAnalysisButton from "@/components/admin/GenerateAnalysisButton";
 
 export default async function AdminMatchesPage() {
     const matches = await prisma.match.findMany({
@@ -39,7 +40,7 @@ export default async function AdminMatchesPage() {
                                 <td className="px-8 py-6">
                                     <div className="font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        {match.homeTeam} <span className="text-slate-400 font-bold not-italic px-2">VS</span> {match.awayTeam}
+                                        {match.homeTeam} <span className="font-black italic px-3 text-lg text-transparent bg-clip-text bg-gradient-to-br from-slate-500 to-slate-900 dark:from-slate-400 dark:to-slate-600 drop-shadow-sm">VS</span> {match.awayTeam}
                                     </div>
                                 </td>
                                 <td className="px-8 py-6">
@@ -51,10 +52,11 @@ export default async function AdminMatchesPage() {
                                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(match.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                                     <div className="text-[10px] font-bold text-slate-300 uppercase mt-0.5">{new Date(match.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
                                 </td>
-                                <td className="px-8 py-6 text-right">
+                                <td className="px-8 py-6 text-right space-x-2">
+                                    <GenerateAnalysisButton matchId={match.id} lang="en" />
                                     <Link
                                         href={`/admin/matches/${match.id}`}
-                                        className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                        className="inline-flex items-center justify-center h-10 px-6 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
                                     >
                                         Edit Details
                                     </Link>

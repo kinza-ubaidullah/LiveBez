@@ -13,10 +13,16 @@ export async function updateBookmakerAction(
         translations: {
             languageCode: string;
             name: string;
+            slug: string;
             bonusText: string;
             sampleOdds?: string | null;
             description?: string | null;
             affiliateUrl: string;
+            seo: {
+                title?: string;
+                description?: string;
+                canonical?: string;
+            };
         }[];
     }
 ) {
@@ -49,28 +55,56 @@ export async function updateBookmakerAction(
 
         // Handle Translations
         for (const trans of data.translations) {
-            await prisma.bookmakerTranslation.upsert({
-                where: { bookmakerId_languageCode: { bookmakerId: bookmakerId as string, languageCode: trans.languageCode } },
-                update: {
-                    name: trans.name,
-                    bonusText: trans.bonusText,
-                    sampleOdds: trans.sampleOdds,
-                    description: trans.description,
-                    affiliateUrl: trans.affiliateUrl
-                },
-                create: {
-                    bookmakerId: bookmakerId as string,
-                    languageCode: trans.languageCode,
-                    name: trans.name,
-                    bonusText: trans.bonusText,
-                    sampleOdds: trans.sampleOdds,
-                    description: trans.description,
-                    affiliateUrl: trans.affiliateUrl
-                }
+            const currentTrans = await prisma.bookmakerTranslation.findFirst({
+                where: { bookmakerId: bookmakerId as string, languageCode: trans.languageCode }
             });
+
+            if (currentTrans) {
+                await (prisma.bookmakerTranslation as any).update({
+                    where: { id: currentTrans.id },
+                    data: {
+                        name: trans.name,
+                        slug: trans.slug,
+                        bonusText: trans.bonusText,
+                        sampleOdds: trans.sampleOdds,
+                        description: trans.description,
+                        affiliateUrl: trans.affiliateUrl,
+                        seo: {
+                            update: {
+                                title: trans.seo.title,
+                                description: trans.seo.description,
+                                canonical: trans.seo.canonical
+                            }
+                        }
+                    }
+                });
+            } else {
+                const newSeo = await prisma.seoFields.create({
+                    data: {
+                        title: trans.seo.title,
+                        description: trans.seo.description,
+                        canonical: trans.seo.canonical
+                    }
+                });
+
+                await (prisma.bookmakerTranslation as any).create({
+                    data: {
+                        bookmakerId: bookmakerId as string,
+                        languageCode: trans.languageCode,
+                        name: trans.name,
+                        slug: trans.slug,
+                        bonusText: trans.bonusText,
+                        sampleOdds: trans.sampleOdds,
+                        description: trans.description,
+                        affiliateUrl: trans.affiliateUrl,
+                        seoId: newSeo.id
+                    }
+                });
+            }
         }
 
         revalidatePath("/admin/bookmakers");
+        revalidatePath("/[lang]/bookmakers", "page");
         return { success: true };
     } catch (error: any) {
         console.error("Bookmaker update failed:", error);

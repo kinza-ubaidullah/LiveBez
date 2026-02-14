@@ -3,7 +3,7 @@
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-export async function updateStaticPage(pageId: string, data: Record<string, { title: string; content: string }>) {
+export async function updateStaticPage(pageId: string, data: Record<string, { title: string; content: string; seoTitle?: string; seoDescription?: string }>) {
     try {
         const languages = await prisma.language.findMany();
 
@@ -21,6 +21,28 @@ export async function updateStaticPage(pageId: string, data: Record<string, { ti
             });
 
             if (existingTrans) {
+                // Update SEO
+                if (existingTrans.seoId) {
+                    await prisma.seoFields.update({
+                        where: { id: existingTrans.seoId },
+                        data: {
+                            title: langData.seoTitle || langData.title,
+                            description: langData.seoDescription || langData.content.substring(0, 160)
+                        }
+                    });
+                } else {
+                    const newSeo = await prisma.seoFields.create({
+                        data: {
+                            title: langData.seoTitle || langData.title,
+                            description: langData.seoDescription || langData.content.substring(0, 160)
+                        }
+                    });
+                    await prisma.staticPageTranslation.update({
+                        where: { id: existingTrans.id },
+                        data: { seoId: newSeo.id }
+                    });
+                }
+
                 await prisma.staticPageTranslation.update({
                     where: { id: existingTrans.id },
                     data: {
@@ -32,8 +54,8 @@ export async function updateStaticPage(pageId: string, data: Record<string, { ti
                 // Create SEO first
                 const newSeo = await prisma.seoFields.create({
                     data: {
-                        title: langData.title,
-                        description: langData.title,
+                        title: langData.seoTitle || langData.title,
+                        description: langData.seoDescription || langData.content.substring(0, 160),
                     }
                 });
 
@@ -51,6 +73,9 @@ export async function updateStaticPage(pageId: string, data: Record<string, { ti
 
         revalidatePath("/admin/pages");
         revalidatePath("/[lang]", "layout");
+        revalidatePath("/[lang]/about-us", "page");
+        revalidatePath("/[lang]/privacy-policy", "page");
+        revalidatePath("/[lang]/terms-of-service", "page");
 
         return { success: true };
     } catch (error: any) {
@@ -58,3 +83,4 @@ export async function updateStaticPage(pageId: string, data: Record<string, { ti
         return { success: false, error: error.message };
     }
 }
+

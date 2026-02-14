@@ -40,31 +40,34 @@ export default async function LocaleLayout({
     let topBookmakers: any[] = [];
 
     // Safe fetch helpers to prevent layout-level crashes
-    const safeFetch = async (promise: Promise<any>, fallback: any) => {
+    const safeFetch = async (fetcher: () => Promise<any>, fallback: any) => {
         try {
-            return await promise || fallback;
+            if (!prisma) return fallback;
+            const result = await fetcher();
+            return result || fallback;
         } catch (e) {
             console.error("Database query failed in layout.tsx:", e);
             return fallback;
         }
     };
 
-    settings = await safeFetch(prisma.siteSettings?.findFirst(), null);
-    languages = await safeFetch(prisma.language?.findMany({
+    settings = await safeFetch(() => prisma.siteSettings.findFirst(), null);
+    languages = await safeFetch(() => prisma.language.findMany({
         where: { isVisible: true },
         orderBy: { name: 'asc' }
     }), []);
-    topLeagues = await safeFetch(prisma.league?.findMany({
+    topLeagues = await safeFetch(() => prisma.league.findMany({
         where: { isFeatured: true } as any,
         include: { translations: { where: { languageCode: lang } } },
         take: 6
     }), []);
-    topBookmakers = await safeFetch(prisma.bookmaker?.findMany({
+    topBookmakers = await safeFetch(() => prisma.bookmaker.findMany({
         where: { isActive: true } as any,
         include: { translations: { where: { languageCode: lang } } },
         orderBy: { rating: 'desc' },
         take: 5
     }), []);
+
 
     const displayTitle = settings?.globalTitle || "LiveBaz | Live Scores & Predictions";
     const brandColor = settings?.globalBrandColor || "#2563eb";
@@ -136,6 +139,7 @@ export default async function LocaleLayout({
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 mb-8 italic">Legal & Support</h4>
                                     <ul className="space-y-6 text-xs font-black uppercase tracking-widest text-slate-400">
                                         <li><Link href={`/${lang}/about-us`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.aboutUs}</Link></li>
+                                        <li><Link href={`/${lang}/live-score`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.liveScoreGuide}</Link></li>
                                         <li><Link href={`/${lang}/privacy-policy`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.privacyPolicy}</Link></li>
                                         <li><Link href={`/${lang}/terms-of-service`} className="hover:text-white transition-colors px-4 py-2 border border-white/5 rounded-xl block text-center italic">{t.footer.termsOfService}</Link></li>
                                     </ul>

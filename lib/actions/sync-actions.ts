@@ -4,6 +4,7 @@ import prisma from "@/lib/db";
 import { oddsApi, SOCCER_SPORTS, Event, OddsEvent } from "@/lib/odds-api";
 import { apiSports } from "@/lib/sports-api";
 import { revalidatePath } from "next/cache";
+import { syncAndAnalyzeMatch } from "@/lib/analysis-service";
 
 interface SyncResult {
     success: boolean;
@@ -71,7 +72,7 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
         try {
             const oddsResponse = await oddsApi.getOdds(sportKey, {
                 regions: 'eu',
-                markets: 'h2h,btts,totals',
+                markets: 'h2h,totals',
             });
             oddsData = oddsResponse.data;
         } catch (err) {
@@ -168,12 +169,16 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                         });
 
                         if (!existingTrans) {
+                            const dateSlug = new Date(event.commence_time).toISOString().split('T')[0];
+                            const matchSlug = `${event.home_team.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vs-${event.away_team.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dateSlug}-${lang.code}`;
+
                             await prisma.matchTranslation.create({
                                 data: {
                                     match: { connect: { id: existingMatch.id } },
                                     language: { connect: { code: lang.code } },
                                     name: `${event.home_team} vs ${event.away_team}`,
-                                    slug: `${event.home_team.toLowerCase().replace(/\s+/g, '-')}-vs-${event.away_team.toLowerCase().replace(/\s+/g, '-')}-${lang.code}-${Date.now()}`,
+                                    slug: matchSlug,
+                                    status: 'PUBLISHED', // Auto-publish for visibility
                                     seo: {
                                         create: {
                                             title: `${event.home_team} vs ${event.away_team} - Predictions`,
@@ -188,47 +193,91 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
                 } else {
                     // Create new match with logos
                     const apiMatch = apiSportsFixtures.find(f => isMatch(f.teams.home.name, event.home_team) && isMatch(f.teams.away.name, event.away_team));
+                    const dateSlug = new Date(event.commence_time).toISOString().split('T')[0];
+                    const baseSlug = `${event.home_team.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vs-${event.away_team.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dateSlug}`;
 
-                    const newMatch = await prisma.match.create({
-                        data: {
-                            date: new Date(event.commence_time),
-                            homeTeam: event.home_team,
-                            awayTeam: event.away_team,
-                            homeTeamId: homeTeam.id,
-                            awayTeamId: awayTeam.id,
-                            leagueId: league.id,
-                            homeTeamLogo: apiMatch?.teams.home.logo,
-                            awayTeamLogo: apiMatch?.teams.away.logo,
-                            apiSportsId: apiMatch?.fixture.id.toString(),
-                            status: 'SCHEDULED',
-                            mainTip: h2hOdds ? getBestTip(h2hOdds) : null,
-                            confidence: h2hOdds ? calculateConfidence(h2hOdds) : null,
-                            translations: {
-                                create: languages.map(lang => ({
-                                    language: { connect: { code: lang.code } },
-                                    name: `${event.home_team} vs ${event.away_team}`,
-                                    slug: `${event.home_team.toLowerCase().replace(/\s+/g, '-')}-vs-${event.away_team.toLowerCase().replace(/\s+/g, '-')}-${lang.code}-${Date.now()}`,
-                                    seo: {
-                                        create: {
-                                            title: `${event.home_team} vs ${event.away_team} - Predictions`,
-                                            description: `Match preview, odds and predictions for ${event.home_team} vs ${event.away_team}`,
-                                        }
-                                    }
-                                }))
-                            },
-                            prediction: h2hOdds ? {
-                                create: {
-                                    winProbHome: h2hOdds.home,
-                                    winProbDraw: h2hOdds.draw,
-                                    winProbAway: h2hOdds.away,
-                                    bttsProb: bttsProb,
-                                    overProb: totalsProb?.over,
-                                    underProb: totalsProb?.under,
-                                }
-                            } : undefined
-                        } as any
+                    // Check for slug collision
+                    const existingBySlug = await prisma.matchTranslation.findFirst({
+                        where: { slug: `${baseSlug}-${languages[0]?.code || 'en'}` },
+                        select: { matchId: true }
                     });
-                    result.created++;
+
+                    let finalMatchId = "";
+
+                    if (existingBySlug) {
+                        finalMatchId = existingBySlug.matchId;
+                        await prisma.match.update({
+                            where: { id: finalMatchId },
+                            data: {
+                                homeTeamLogo: apiMatch?.teams.home.logo,
+                                awayTeamLogo: apiMatch?.teams.away.logo,
+                                apiSportsId: apiMatch?.fixture.id.toString(),
+                            }
+                        });
+                        result.updated++;
+                    } else {
+                        try {
+                            const newMatch = await prisma.match.create({
+                                data: {
+                                    date: new Date(event.commence_time),
+                                    homeTeam: event.home_team,
+                                    awayTeam: event.away_team,
+                                    homeTeamId: homeTeam.id,
+                                    awayTeamId: awayTeam.id,
+                                    leagueId: league.id,
+                                    homeTeamLogo: apiMatch?.teams.home.logo,
+                                    awayTeamLogo: apiMatch?.teams.away.logo,
+                                    apiSportsId: apiMatch?.fixture.id.toString(),
+                                    status: 'SCHEDULED',
+                                    mainTip: h2hOdds ? getBestTip(h2hOdds) : null,
+                                    confidence: h2hOdds ? calculateConfidence(h2hOdds) : null,
+                                    translations: {
+                                        create: languages.map(lang => ({
+                                            language: { connect: { code: lang.code } },
+                                            name: `${event.home_team} vs ${event.away_team}`,
+                                            slug: `${baseSlug}-${lang.code}`,
+                                            status: 'PUBLISHED',
+                                            seo: {
+                                                create: {
+                                                    title: `${event.home_team} vs ${event.away_team} - Predictions`,
+                                                    description: `Match preview, odds and predictions for ${event.home_team} vs ${event.away_team}`,
+                                                }
+                                            }
+                                        }))
+                                    },
+                                    prediction: h2hOdds ? {
+                                        create: {
+                                            winProbHome: h2hOdds.home,
+                                            winProbDraw: h2hOdds.draw,
+                                            winProbAway: h2hOdds.away,
+                                            bttsProb: bttsProb,
+                                            overProb: totalsProb?.over,
+                                            underProb: totalsProb?.under,
+                                        }
+                                    } : undefined
+                                } as any
+                            });
+                            finalMatchId = newMatch.id;
+                            result.created++;
+                        } catch (err: any) {
+                            if (err.code === 'P2002') {
+                                const collisionMatch = await prisma.matchTranslation.findFirst({
+                                    where: { slug: `${baseSlug}-${languages[0]?.code || 'en'}` },
+                                    select: { matchId: true }
+                                });
+                                if (collisionMatch) {
+                                    finalMatchId = collisionMatch.matchId;
+                                } else continue;
+                            } else throw err;
+                        }
+                    }
+
+                    // QUEUE ANALYSIS: Trigger AI analysis generation for the primary language (en)
+                    if (finalMatchId) {
+                        setTimeout(() => {
+                            syncAndAnalyzeMatch(finalMatchId, 'en', false, true).catch(e => console.error("Auto analysis failed:", e));
+                        }, 100);
+                    }
                 }
             } catch (err: any) {
                 result.errors.push(`Error processing ${event.home_team} vs ${event.away_team}: ${err.message}`);
@@ -236,8 +285,10 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
         }
 
         result.success = true;
-        revalidatePath('/admin/matches');
-        revalidatePath('/[lang]', 'layout');
+        try {
+            revalidatePath('/admin/matches');
+            revalidatePath('/[lang]', 'layout');
+        } catch (e) { }
 
     } catch (error: any) {
         result.errors.push(`Sync failed: ${error.message}`);
@@ -317,7 +368,9 @@ export async function syncLiveScores(): Promise<SyncResult> {
         }
 
         result.success = true;
-        revalidatePath('/[lang]', 'layout');
+        try {
+            revalidatePath('/[lang]', 'layout');
+        } catch (e) { }
     } catch (error: any) {
         result.errors.push(`Live sync failed: ${error.message}`);
     }
@@ -471,6 +524,72 @@ function getBestTip(odds: { home: number; draw: number; away: number }): string 
 
 function calculateConfidence(odds: { home: number; draw: number; away: number }): number {
     return Math.max(odds.home, odds.draw, odds.away);
+}
+
+/**
+ * Sync all major leagues at once
+ */
+export async function syncAllLeagues(): Promise<{ success: boolean; results: any[] }> {
+    const sports = [
+        SOCCER_SPORTS.EPL,
+        SOCCER_SPORTS.LA_LIGA,
+        SOCCER_SPORTS.BUNDESLIGA,
+        SOCCER_SPORTS.SERIE_A,
+        SOCCER_SPORTS.LIGUE_1
+    ];
+
+    const results = [];
+    for (const sport of sports) {
+        console.log(`[Batch Sync] Starting ${sport}...`);
+        const res = await syncFixtures(sport);
+        results.push({ sport, ...res });
+        // Small delay between leagues to respect AI/API rate limits
+        await new Promise(r => setTimeout(r, 2000));
+    }
+
+    try {
+        revalidatePath('/[lang]', 'layout');
+    } catch (e) { }
+    return { success: true, results };
+}
+
+/**
+ * Bulk generate missing analysis for upcoming matches
+ */
+export async function generateMissingAnalysisAction(): Promise<{ success: boolean; count: number }> {
+    const matches = await prisma.match.findMany({
+        where: {
+            date: { gte: new Date() },
+            status: 'SCHEDULED',
+            translations: {
+                some: {
+                    OR: [
+                        { analysis: null },
+                        { analysis: "" }
+                    ]
+                }
+            }
+        },
+        include: {
+            translations: true
+        },
+        take: 10 // Process 10 at a time to avoid timeouts
+    });
+
+    let count = 0;
+    for (const match of matches) {
+        for (const trans of match.translations) {
+            if (!trans.analysis) {
+                console.log(`[Bulk AI] Analyzing ${match.homeTeam} vs ${match.awayTeam} (${trans.languageCode})...`);
+                await syncAndAnalyzeMatch(match.id, trans.languageCode, false, true); // Auto-publish
+                count++;
+                await new Promise(r => setTimeout(r, 1000)); // Rate limit protection
+            }
+        }
+    }
+
+    revalidatePath('/admin/analysis');
+    return { success: true, count };
 }
 
 async function ensureTeam(name: string, logo: string | undefined, languages: any[]) {

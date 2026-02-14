@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import LanguageManager from "@/components/admin/LanguageManager";
+import Link from "next/link";
 
 export default async function LanguagesPage() {
     const languages = await prisma.language.findMany({
@@ -15,9 +16,9 @@ export default async function LanguagesPage() {
                     <p className="text-slate-500 text-sm mt-4 max-w-2xl">Manage platform translations and public visibility. "Hidden" languages will be excluded from the public navbar and routing, allowing you to build content in private.</p>
                 </div>
 
-                <button className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl">
+                <Link href="/admin/languages/new" className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl inline-block">
                     Add New Language
-                </button>
+                </Link>
             </div>
 
             <LanguageManager initialLanguages={languages} />

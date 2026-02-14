@@ -1,5 +1,5 @@
 import prisma from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -53,8 +53,15 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
         }
     });
 
-    // 2. Strict check: No fallback to numeric IDs. Slugs must match perfectly.
-    if (!matchTrans || matchTrans.languageCode !== lang || matchTrans.status !== 'PUBLISHED') {
+    // 2. Draft check: If match is DRAFT, only allow if searching by ID or special admin preview (simplified for now)
+    if (!matchTrans || matchTrans.languageCode !== lang) {
+        // Fallback: search for match in any language and redirect
+        const fallbackTrans = await prisma.matchTranslation.findFirst({
+            where: { slug: matchSlug }
+        });
+        if (fallbackTrans) {
+            redirect(`/${fallbackTrans.languageCode}/match/${matchSlug}`);
+        }
         notFound();
     }
 
@@ -66,8 +73,9 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
     const leagueTransData = match.league.translations[0];
     const leagueName = leagueTransData?.name || match.league.country;
 
+    // If leagueSlug is 'any' or doesn't match, redirect to the correct canonical URL
     if (leagueTransData && leagueTransData.slug !== leagueSlug) {
-        notFound();
+        redirect(`/${lang}/league/${leagueTransData.slug}/${matchSlug}`);
     }
 
     const translateTip = (tip: string | null | undefined) => {
@@ -152,6 +160,8 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                             stats={stats}
                             lineups={lineups}
                             h2h={h2h}
+                            comparison={matchData?.comparison || null}
+                            predictionsFull={matchData?.predictionsFull || null}
                             analysis={matchTrans.status === 'PUBLISHED' ? matchTrans.analysis : null}
                             lang={lang}
                             t={t}

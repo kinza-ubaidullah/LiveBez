@@ -185,36 +185,76 @@ export async function GET(request: NextRequest) {
                 });
                 matchId = existingMatch.id;
             } else {
-                const newMatch = await prisma.match.create({
-                    data: {
-                        date: new Date(f.fixture.date),
-                        homeTeam: f.teams.home.name,
-                        awayTeam: f.teams.away.name,
-                        homeScore: f.goals.home,
-                        awayScore: f.goals.away,
-                        leagueId: dbLeague.id,
-                        status: f.fixture.status.short,
-                        minute: f.fixture.status.elapsed,
-                        apiSportsId: apiMatchId,
-                        homeTeamLogo: f.teams.home.logo,
-                        awayTeamLogo: f.teams.away.logo,
-                        mainTip: probabilityData ? (probabilityData.home > probabilityData.away ? "Home Win" : "Away Win") : "Analysis Pending",
-                        isFeatured: POPULAR_LEAGUES.includes(f.league.id),
-                        translations: {
-                            create: languages.map(lang => ({
-                                language: { connect: { code: lang.code } },
-                                name: `${f.teams.home.name} vs ${f.teams.away.name}`,
-                                slug: `${slug}-${lang.code}`,
-                                seo: {
-                                    create: {
-                                        title: `${f.teams.home.name} vs ${f.teams.away.name}`
-                                    }
+                // Secondary check: Does a match with this slug already exist?
+                const existingTransBySlug = await prisma.matchTranslation.findFirst({
+                    where: { slug: `${slug}-${languages[0]?.code || 'en'}` },
+                    select: { matchId: true }
+                });
+
+                if (existingTransBySlug) {
+                    matchId = existingTransBySlug.matchId;
+                    // Update the match that was found by slug
+                    await prisma.match.update({
+                        where: { id: matchId },
+                        data: {
+                            apiSportsId: apiMatchId, // Link it now
+                            homeScore: f.goals.home,
+                            awayScore: f.goals.away,
+                            status: f.fixture.status.short,
+                            minute: f.fixture.status.elapsed,
+                        }
+                    });
+                } else {
+                    try {
+                        const newMatch = await prisma.match.create({
+                            data: {
+                                date: new Date(f.fixture.date),
+                                homeTeam: f.teams.home.name,
+                                awayTeam: f.teams.away.name,
+                                homeScore: f.goals.home,
+                                awayScore: f.goals.away,
+                                leagueId: dbLeague.id,
+                                status: f.fixture.status.short,
+                                minute: f.fixture.status.elapsed,
+                                apiSportsId: apiMatchId,
+                                homeTeamLogo: f.teams.home.logo,
+                                awayTeamLogo: f.teams.away.logo,
+                                mainTip: probabilityData ? (probabilityData.home > probabilityData.away ? "Home Win" : "Away Win") : "Analysis Pending",
+                                isFeatured: POPULAR_LEAGUES.includes(Number(f.league.id)),
+                                translations: {
+                                    create: languages.map(lang => ({
+                                        language: { connect: { code: lang.code } },
+                                        name: `${f.teams.home.name} vs ${f.teams.away.name}`,
+                                        slug: `${slug}-${lang.code}`,
+                                        status: 'PUBLISHED',
+                                        seo: {
+                                            create: {
+                                                title: `${f.teams.home.name} vs ${f.teams.away.name}`
+                                            }
+                                        }
+                                    }))
                                 }
-                            }))
+                            }
+                        });
+                        matchId = newMatch.id;
+                    } catch (createErr: any) {
+                        if (createErr.code === 'P2002') {
+                            // Race condition or slug collision we missed
+                            const collisionMatch = await prisma.matchTranslation.findFirst({
+                                where: { slug: `${slug}-${languages[0]?.code || 'en'}` },
+                                select: { matchId: true }
+                            });
+                            if (collisionMatch) {
+                                matchId = collisionMatch.matchId;
+                            } else {
+                                console.error("True slug collision in create:", createErr);
+                                continue;
+                            }
+                        } else {
+                            throw createErr;
                         }
                     }
-                });
-                matchId = newMatch.id;
+                }
             }
 
             // Sync Predictions/Odds

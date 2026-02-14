@@ -6,19 +6,31 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🧹 Cleaning database...');
     // Order matters for deletion due to relations
+    console.log('🧹 Cleaning translations...');
+    await prisma.staticPageTranslation.deleteMany({});
+    await prisma.teamTranslation.deleteMany({});
     await prisma.bookmakerTranslation.deleteMany({});
-    await prisma.bookmaker.deleteMany({});
     await prisma.predictionTranslation.deleteMany({});
     await prisma.articleTranslation.deleteMany({});
-    await prisma.articleCategoryTranslation.deleteMany({});
     await prisma.matchTranslation.deleteMany({});
+    await prisma.articleCategoryTranslation.deleteMany({});
     await prisma.leagueTranslation.deleteMany({});
-    await prisma.seoFields.deleteMany({});
+
+    console.log('🧹 Cleaning entities...');
+    await prisma.staticPage.deleteMany({});
+    await prisma.bookmaker.deleteMany({});
     await prisma.prediction.deleteMany({});
-    await prisma.match.deleteMany({});
     await prisma.article.deleteMany({});
+
+    // Core functional data
+    await prisma.match.deleteMany({}); // References Team, League
+    await prisma.team.deleteMany({});
     await prisma.articleCategory.deleteMany({});
     await prisma.league.deleteMany({});
+
+    // Shared/independent data
+    await prisma.seoFields.deleteMany({});
+    await prisma.siteSettings.deleteMany({});
     await prisma.language.deleteMany({});
     await prisma.adminUser.deleteMany({});
 
@@ -71,18 +83,26 @@ async function main() {
     console.log('🏆 Creating Leagues...');
 
     // Premier League
-    const pl = await prisma.league.create({ data: { country: 'England' } });
+    const pl = await prisma.league.upsert({
+        where: { apiId: '39' },
+        update: {},
+        create: { country: 'England', apiId: '39' }
+    });
     const plSeoEn = await prisma.seoFields.create({ data: { title: 'Premier League Predictions', description: 'Expert analysis for EPL matches.' } });
-    await prisma.leagueTranslation.create({ data: { leagueId: pl.id, languageCode: 'en', name: 'Premier League', slug: 'premier-league', seoId: plSeoEn.id } });
+    await prisma.leagueTranslation.upsert({ where: { slug: 'premier-league' }, update: {}, create: { leagueId: pl.id, languageCode: 'en', name: 'Premier League', slug: 'premier-league', seoId: plSeoEn.id } });
     const plSeoAr = await prisma.seoFields.create({ data: { title: 'توقعات الدوري الإنجليزي', description: 'تحليل الخبراء للدوري الإنجليزي.' } });
-    await prisma.leagueTranslation.create({ data: { leagueId: pl.id, languageCode: 'ar', name: 'الدوري الإنجليزي الممتاز', slug: 'premier-league-ar', seoId: plSeoAr.id } });
+    await prisma.leagueTranslation.upsert({ where: { slug: 'premier-league-ar' }, update: {}, create: { leagueId: pl.id, languageCode: 'ar', name: 'الدوري الإنجليزي الممتاز', slug: 'premier-league-ar', seoId: plSeoAr.id } });
 
     // La Liga
-    const laliga = await prisma.league.create({ data: { country: 'Spain' } });
+    const laliga = await prisma.league.upsert({
+        where: { apiId: '140' },
+        update: {},
+        create: { country: 'Spain', apiId: '140' }
+    });
     const laligaSeoEn = await prisma.seoFields.create({ data: { title: 'La Liga Predictions', description: 'Spanish football expert analysis.' } });
-    await prisma.leagueTranslation.create({ data: { leagueId: laliga.id, languageCode: 'en', name: 'La Liga', slug: 'la-liga', seoId: laligaSeoEn.id } });
+    await prisma.leagueTranslation.upsert({ where: { slug: 'la-liga' }, update: {}, create: { leagueId: laliga.id, languageCode: 'en', name: 'La Liga', slug: 'la-liga', seoId: laligaSeoEn.id } });
     const laligaSeoAr = await prisma.seoFields.create({ data: { title: 'توقعات الليغا', description: 'تحليل كرة القدم الإسبانية.' } });
-    await prisma.leagueTranslation.create({ data: { leagueId: laliga.id, languageCode: 'ar', name: 'الدوري الإسباني', slug: 'la-liga-ar', seoId: laligaSeoAr.id } });
+    await prisma.leagueTranslation.upsert({ where: { slug: 'la-liga-ar' }, update: {}, create: { leagueId: laliga.id, languageCode: 'ar', name: 'الدوري الإسباني', slug: 'la-liga-ar', seoId: laligaSeoAr.id } });
 
     // ========== MATCHES ==========
     console.log('⚽ Creating Matches...');
@@ -97,15 +117,102 @@ async function main() {
     const m1SeoAr = await prisma.seoFields.create({ data: { title: 'توقع السيتي وأرسنال', description: 'مواجهة حاسمة على ملعب الاتحاد.' } });
     await prisma.matchTranslation.create({ data: { matchId: match1.id, languageCode: 'ar', name: 'مانشستر سيتي ضد أرسنال', slug: 'man-city-vs-arsenal-ar', content: '<p>أكبر مباراة في الموسم حيث يستضيف السيتي الغانرز في مواجهة حاسمة على اللقب.</p>', analysis: '<strong>المواجهة الحاسمة:</strong> هالاند ضد ساليبا ستكون حاسمة. توقعوا درسًا تكتيكيًا من المدربين.', seoId: m1SeoAr.id } });
 
+    // La Liga Match 2: Real Madrid vs Barcelona
+    const match2 = await prisma.match.create({
+        data: {
+            date: new Date('2026-03-01T20:00:00Z'),
+            homeTeam: 'Real Madrid',
+            awayTeam: 'Barcelona',
+            leagueId: laliga.id,
+            status: 'SCHEDULED',
+            homeTeamLogo: 'https://media.api-sports.io/football/teams/541.png',
+            awayTeamLogo: 'https://media.api-sports.io/football/teams/529.png',
+            lineups: 'Real Madrid: Courtois, Carvajal, Militao, Rüdiger, Mendy; Tchouameni, Bellingham, Valverde; Rodrygo, Mbappe, Vinicius Jr\nBarcelona: Ter Stegen, Kounde, Araujo, Cubarsi, Balde; De Jong, Pedri, Gavi; Yamal, Lewandowski, Raphinha',
+            stats: 'Head to Head: Real Madrid 3-2 Barcelona (last 5)\nForm: Madrid WWDDW, Barca WWWWW',
+            mainTip: 'Both Teams To Score: Yes',
+            confidence: 85
+        }
+    });
+    await prisma.prediction.create({ data: { matchId: match2.id, winProbHome: 40, winProbAway: 35, winProbDraw: 25, bttsProb: 75, overProb: 65, underProb: 35 } });
+    const m2SeoEn = await prisma.seoFields.create({ data: { title: 'El Clasico Prediction: Real Madrid vs Barcelona', description: 'Expert betting tips for El Clasico.' } });
+    await prisma.matchTranslation.create({ data: { matchId: match2.id, languageCode: 'en', name: 'Real Madrid vs Barcelona', slug: 'real-madrid-vs-barcelona-el-clasico', content: '<p>The world stops for El Clasico as Mbappe faces Barcelona for the first time in white.</p>', analysis: '<strong>Prediction:</strong> High scoring affair. With both attacks firing on all cylinders, Over 2.5 Goals looks like a banker.', seoId: m2SeoEn.id } });
+    const m2SeoAr = await prisma.seoFields.create({ data: { title: 'توقعات الكلاسيكو: ريال مدريد وبرشلونة', description: 'نصائح الرهان للكلاسيكو.' } });
+    await prisma.matchTranslation.create({ data: { matchId: match2.id, languageCode: 'ar', name: 'ريال مدريد ضد برشلونة', slug: 'real-madrid-vs-barcelona-el-clasico-ar', content: '<p>العالم يتوقف من أجل الكلاسيكو حيث يواجه مبابي برشلونة لأول مرة باللون الأبيض.</p>', analysis: '<strong>التوقع:</strong> مباراة عالية التهديف. مع هجوم الفريقين في أفضل حالاته، يبدو أن خيار أكثر من 2.5 هدف رهان مضمون.', seoId: m2SeoAr.id } });
+
     // ========== ARTICLES ==========
     console.log('📰 Creating Articles...');
 
-    // Article 1: Title Race Analysis
-    const art1 = await prisma.article.create({ data: { categoryId: catAnalysis.id, published: true } });
-    const a1SeoEn = await prisma.seoFields.create({ data: { title: '2026 Title Race Guide', description: 'Full breakdown of the title race.' } });
-    await prisma.articleTranslation.create({ data: { articleId: art1.id, languageCode: 'en', title: 'The 2026 Title Race Analysis', slug: 'title-race-2026', excerpt: 'Who stands the best chance?', content: '<h2>The Contenders</h2><p>With just 10 games remaining, the title race is wide open. Man City leads by 2 points from Arsenal, with Liverpool just 4 points behind.</p>', seoId: a1SeoEn.id } });
-    const a1SeoAr = await prisma.seoFields.create({ data: { title: 'تحليل سباق اللقب 2026', description: 'تحليل شامل لسباق اللقب.' } });
-    await prisma.articleTranslation.create({ data: { articleId: art1.id, languageCode: 'ar', title: 'تحليل سباق لقب 2026', slug: 'title-race-2026-ar', excerpt: 'من لديه الفرصة الأفضل؟', content: '<h2>المتنافسون</h2><p>مع تبقي 10 مباريات فقط، سباق اللقب مفتوح على مصراعيه. السيتي يتصدر بفارق نقطتين عن أرسنال، وليفربول على بعد 4 نقاط فقط.</p>', seoId: a1SeoAr.id } });
+    // Article 1: El Clasico Analysis (Linked to Match 2)
+    const art1 = await prisma.article.create({ data: { categoryId: catAnalysis.id, published: true, isFeatured: true, matchId: match2.id, featuredImage: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=1000' } });
+
+    // Article 2: Man City vs Arsenal (Linked to Match 1)
+    const art3 = await prisma.article.create({ data: { categoryId: catAnalysis.id, published: true, matchId: match1.id, featuredImage: 'https://images.unsplash.com/photo-1486286701208-1d58e9338013?q=80&w=1000' } });
+    const a3SeoEn = await prisma.seoFields.create({ data: { title: 'PL Request A Bet: City vs Arsenal Stats', description: 'Stats pack for the big game.' } });
+    await prisma.articleTranslation.create({ data: { articleId: art3.id, languageCode: 'en', title: 'Stats Pack: Man City vs Arsenal', slug: 'city-arsenal-stats-pack', excerpt: 'Everything you need for your Bet Builder.', content: '<h2>Haaland\'s Record</h2><p>Haaland has scored in 4 of his last 5 games against Arsenal. He is priced at 1.80 to score anytime.</p><h2>Card Watch</h2><p>Rodri and Declan Rice are key battles in midfield. Over 4.5 Cards in the match is priced at 2.10.</p>', seoId: a3SeoEn.id } });
+    const a3SeoAr = await prisma.seoFields.create({ data: { title: 'إحصائيات السيتي وأرسنال', description: 'حقيبة الإحصائيات للمباراة الكبيرة.' } });
+    await prisma.articleTranslation.create({ data: { articleId: art3.id, languageCode: 'ar', title: 'حزمة الإحصائيات: مانشستر سيتي ضد أرسنال', slug: 'city-arsenal-stats-pack-ar', excerpt: 'كل ما تحتاجه لبناء رهانك.', content: '<h2>سجل هالاند</h2><p>سجل هالاند في 4 من آخر 5 مباريات له ضد أرسنال. سعره 1.80 للتسجيل في أي وقت.</p><h2>مراقبة البطاقات</h2><p>رودري وديكلان رايس معارك رئيسية في خط الوسط. أكثر من 4.5 بطاقات في المباراة بسعر 2.10.</p>', seoId: a3SeoAr.id } });
+
+    // Match Today: Liverpool vs Man Utd (To ensure homepage has content)
+    const today = new Date();
+    today.setHours(20, 0, 0, 0); // Tonight at 8 PM
+
+    const matchToday = await prisma.match.create({
+        data: {
+            date: today,
+            homeTeam: 'Liverpool',
+            awayTeam: 'Man Utd',
+            leagueId: pl.id, // Reuse Premier League
+            status: 'SCHEDULED',
+            homeTeamLogo: 'https://media.api-sports.io/football/teams/40.png',
+            awayTeamLogo: 'https://media.api-sports.io/football/teams/33.png',
+            lineups: 'Liverpool: Alisson, Alexander-Arnold, Konate, Van Dijk, Robertson; Szoboszlai, Mac Allister; Salah, Gakpo, Diaz; Nunez\nMan Utd: Onana, Dalot, Varane, Martinez, Shaw; Mainoo, Casemiro; Garnacho, Fernandes, Rashford; Hojlund',
+            stats: 'Head to Head: Liverpool 7-0 Man Utd (Last Meeting)\nForm: Liverpool WWWDW, Man Utd LWWDL',
+            mainTip: 'Liverpool to Win & Over 2.5 Goals',
+            confidence: 90
+        }
+    });
+
+    await prisma.prediction.create({
+        data: {
+            matchId: matchToday.id,
+            winProbHome: 65,
+            winProbAway: 15,
+            winProbDraw: 20,
+            bttsProb: 60,
+            overProb: 70,
+            underProb: 30
+        }
+    });
+
+    const mtSeoEn = await prisma.seoFields.create({ data: { title: 'Liverpool vs Man Utd Prediction', description: 'North West Derby betting tips.' } });
+    const mtSlugEn = `liverpool-vs-man-utd-${today.toISOString().split('T')[0]}`;
+    await prisma.matchTranslation.create({
+        data: {
+            matchId: matchToday.id,
+            languageCode: 'en',
+            name: 'Liverpool vs Man Utd',
+            slug: mtSlugEn,
+            content: '<p>The bitter rivals meet again at Anfield. Liverpool will be looking to replicate their historic 7-0 win from last season.</p>',
+            analysis: '<strong>Key Factor:</strong> Liverpool\'s high press vs United\'s transition. If United can break the press, they have a chance, but Anfield is a fortress.',
+            seoId: mtSeoEn.id,
+            status: 'PUBLISHED' // Important for page visibility
+        }
+    });
+
+    const mtSeoAr = await prisma.seoFields.create({ data: { title: 'توقعات ليفربول ومانشستر يونايتد', description: 'نصائح الرهان لمباراة الديربي.' } });
+    const mtSlugAr = `liverpool-vs-man-utd-${today.toISOString().split('T')[0]}-ar`;
+    await prisma.matchTranslation.create({
+        data: {
+            matchId: matchToday.id,
+            languageCode: 'ar',
+            name: 'ليفربول ضد مانشستر يونايتد',
+            slug: mtSlugAr,
+            content: '<p>يلتقي الخصمان اللدودان مرة أخرى في آنفيلد.</p>',
+            analysis: '<strong>العامل الرئيسي:</strong> ضغط ليفربول العالي.',
+            seoId: mtSeoAr.id,
+            status: 'PUBLISHED'
+        }
+    });
 
     // Article 2: Transfer News
     const art2 = await prisma.article.create({ data: { categoryId: catTransfer.id, published: true } });

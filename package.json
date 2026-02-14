@@ -9,8 +9,9 @@
     "start": "next start",
     "lint": "eslint",
     "prisma:seed": "prisma db seed",
-    "fix": "ts-node --compiler-options {\"module\":\"CommonJS\"} scripts/fix-website.ts",
-    "migrate-logos": "ts-node --compiler-options {\"module\":\"CommonJS\"} scripts/migrate-logos.ts",
+    "fix": "ts-node -r tsconfig-paths/register --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/fix-website.ts",
+    "migrate-logos": "ts-node -r tsconfig-paths/register --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/migrate-logos.ts",
+    "sync": "ts-node -r tsconfig-paths/register --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/full-sync.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -49,9 +50,10 @@
     "prisma": "^6.1.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" prisma/seed.ts"
   }
 }

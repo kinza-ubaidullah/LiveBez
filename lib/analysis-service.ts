@@ -3,7 +3,7 @@ import { generateMatchAnalysis } from "@/lib/ai-service";
 import { getFullMatchDetails } from "@/lib/match-service";
 import { revalidatePath } from "next/cache";
 
-export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUpdate: boolean = false) {
+export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUpdate: boolean = false, autoPublish: boolean = false) {
     try {
         const match = await prisma.match.findUnique({
             where: { id: matchId },
@@ -15,7 +15,7 @@ export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUp
         });
 
         if (!match) return { success: false, error: "Match not found" };
-        if (!match.apiSportsId) return { success: false, error: "No API ID" };
+        // if (!match.apiSportsId) return { success: false, error: "No API ID" }; // ALLOW MANUAL MATCHES
 
         const existingTrans = match.translations[0];
 
@@ -25,7 +25,7 @@ export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUp
         }
 
         // Fetch fresh stats/h2h
-        const fullDetails = await getFullMatchDetails(matchId, match.apiSportsId);
+        const fullDetails = match.apiSportsId ? await getFullMatchDetails(matchId, match.apiSportsId) : null;
 
         const safeJsonParse = (str: string | null) => {
             if (!str) return null;
@@ -43,7 +43,7 @@ export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUp
             lang
         });
 
-        const status = existingTrans?.status || (match.isFeatured ? 'PUBLISHED' : 'DRAFT');
+        const status: string = autoPublish ? 'PUBLISHED' : 'DRAFT';
 
         const seo = await prisma.seoFields.create({
             data: {
@@ -71,9 +71,17 @@ export async function syncAndAnalyzeMatch(matchId: string, lang: string, forceUp
             }
         });
 
-        revalidatePath(`/admin/matches/${matchId}`);
-        revalidatePath(`/[lang]/predictions`, 'page');
-        revalidatePath(`/[lang]/blog`, 'page');
+        const safeRevalidate = (path: string, type?: 'page' | 'layout') => {
+            try {
+                revalidatePath(path, type);
+            } catch (e) {
+                // Silently fail if not in Next.js request context
+            }
+        };
+
+        safeRevalidate(`/admin/matches/${matchId}`);
+        safeRevalidate(`/[lang]/predictions`, 'page');
+        safeRevalidate(`/[lang]/blog`, 'page');
 
         // --- NEW: Sync with Articles table ---
         try {

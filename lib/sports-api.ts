@@ -1,10 +1,14 @@
-/**
- * API-Sports Client
- * Handles direct communication with v3.football.api-sports.io
- */
+import { config } from 'dotenv';
 
-const BASE_URL = process.env.FOOTBALL_API_URL || 'https://v3.football.api-sports.io';
-const API_KEY = process.env.API_SPORTS_KEY;
+// Try to load .env if we are running in a script environment
+try {
+    config();
+} catch (e) {
+    // Ignore error if dotenv is not available or fails
+}
+
+const BASE_URL = process.env.FOOTBALL_API_URL?.trim() || 'https://v3.football.api-sports.io';
+const API_KEY = process.env.API_SPORTS_KEY?.trim();
 
 export interface ApiSportsResponse<T> {
     get: string;
@@ -30,42 +34,98 @@ class ApiSportsClient {
 
     constructor() {
         if (!API_KEY) {
-            console.warn('API_SPORTS_KEY is not set. API-Sports calls will fail.');
+            console.warn('⚠️ API_SPORTS_KEY is not set in environment variables. API-Sports calls will fail.');
         }
         this.apiKey = API_KEY || '';
     }
 
     private async request<T>(endpoint: string, params: Record<string, string> = {}, revalidate: number = 60): Promise<ApiSportsResponse<T>> {
+        if (!this.apiKey) {
+            throw new Error('MISSING_API_KEY: API_SPORTS_KEY is not configured.');
+        }
+
         const url = new URL(`${BASE_URL}${endpoint}`);
         for (const [key, value] of Object.entries(params)) {
             url.searchParams.set(key, value);
         }
 
-        try {
-            const response = await fetch(url.toString(), {
-                headers: {
-                    'x-apisports-key': this.apiKey,
-                },
-                next: { revalidate }
-            });
+        const hiddenUrl = url.toString();
+        console.log(`📡 API-Sports Request: ${endpoint} ${JSON.stringify(params)}`);
 
-            if (!response.ok) {
-                throw new Error(`API-Sports request failed: ${response.status} ${response.statusText}`);
+        const maxRetries = 3;
+        const timeout = 12000; // 12 seconds
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                const response = await fetch(url.toString(), {
+                    headers: {
+                        'x-apisports-key': this.apiKey,
+                        'x-rapidapi-host': 'v3.football.api-sports.io'
+                    },
+                    next: { revalidate },
+                    signal: controller.signal,
+                } as any);
+
+                clearTimeout(timeoutId);
+
+                if (response.status === 401 || response.status === 403) {
+                    console.error('❌ API-Sports: Unauthorized/Invalid API Key');
+                    throw new Error('API_KEY_INVALID');
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'No error body');
+                    throw new Error(`API-Sports request failed [${response.status} ${response.statusText}]: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                if (data.errors && Object.keys(data.errors).length > 0 && !Array.isArray(data.errors)) {
+                    // API-Sports sometimes returns errors in an object
+                    console.error('❌ API-Sports Error:', data.errors);
+                    throw new Error(JSON.stringify(data.errors));
+                }
+
+                if (Array.isArray(data.errors) && data.errors.length > 0) {
+                    console.error('❌ API-Sports Errors:', data.errors);
+                    throw new Error(data.errors.join(', '));
+                }
+
+                return data;
+            } catch (error: any) {
+                const isLastAttempt = attempt === maxRetries;
+                const isNetworkError = error.code === 'ENOTFOUND' ||
+                    error.cause?.code === 'ENOTFOUND' ||
+                    error.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+                    error.name === 'AbortError' ||
+                    error.message.includes('fetch failed');
+
+                if (isNetworkError) {
+                    console.warn(`⚠️ API-Sports attempt ${attempt}/${maxRetries} failed: ${error.cause?.code || error.name || error.message}`);
+
+                    if (isLastAttempt) {
+                        console.error(`❌ API-Sports: Connectivity error. Cannot reach ${BASE_URL}. Check your internet connection or DNS.`);
+                        throw new Error('API_NETWORK_ERROR');
+                    }
+
+                    // Exponential backoff
+                    const backoffMs = Math.pow(2, attempt - 1) * 1500;
+                    console.log(`⏳ Retrying in ${backoffMs}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    continue;
+                }
+
+                console.error('❌ API-Sports request failed:', error.message || error);
+                throw error;
             }
-
-            const data = await response.json();
-
-            if (data.errors && Object.keys(data.errors).length > 0) {
-                console.error('API-Sports Error:', data.errors);
-                throw new Error(JSON.stringify(data.errors));
-            }
-
-            return data;
-        } catch (error: any) {
-            console.error('API-Sports request failed:', error.message || error);
-            throw error;
         }
+
+        throw new Error('API_NETWORK_ERROR');
     }
+
 
     /**
      * Get live scores or fixtures for a specific day/league

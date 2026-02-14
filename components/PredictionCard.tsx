@@ -75,7 +75,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
 
                         {/* VS Center */}
                         <div className="flex flex-col items-center gap-1 md:gap-2 px-2">
-                            <div className="text-2xl md:text-5xl font-black text-slate-200 dark:text-slate-800 italic tracking-tighter opacity-50">VS</div>
+                            <div className="text-4xl md:text-7xl font-black italic tracking-tighter drop-shadow-sm text-transparent bg-clip-text bg-gradient-to-br from-slate-600 via-slate-800 to-black dark:from-slate-200 dark:via-slate-400 dark:to-slate-600" style={{ textShadow: '2px 2px 0px rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.15)' }}>VS</div>
                             <div className="px-2 md:px-3 py-0.5 md:py-1 bg-blue-600 text-white text-[8px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-blue-600/20 whitespace-nowrap">
                                 {timeString}
                             </div>

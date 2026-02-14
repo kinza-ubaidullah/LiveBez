@@ -4,10 +4,15 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('--- Seeding Bookmakers ---');
 
+    // Clear existing to avoid duplicates
+    await prisma.bookmakerTranslation.deleteMany();
+    await prisma.bookmaker.deleteMany();
+    console.log('✔ Cleared existing bookmakers');
+
     const bookmakers = [
         {
             name: 'Bet365',
-            logoUrl: 'https://logos-world.net/wp-content/uploads/2021/02/Bet365-Logo.png',
+            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Bet365_logo.svg/1200px-Bet365_logo.svg.png',
             rating: 4.9,
             bonusText: '100% Deposit Bonus up to $100',
             affiliateUrl: 'https://www.bet365.com',
@@ -15,7 +20,7 @@ async function main() {
         },
         {
             name: '1XBet',
-            logoUrl: 'https://logos-world.net/wp-content/uploads/2022/01/1xBet-Logo.png',
+            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/1XBET_logo.svg/1200px-1XBET_logo.svg.png',
             rating: 4.8,
             bonusText: 'Exclusive 130% Welcome Bonus',
             affiliateUrl: 'https://1xbet.com',
@@ -23,7 +28,7 @@ async function main() {
         },
         {
             name: 'Melbet',
-            logoUrl: 'https://logos-world.net/wp-content/uploads/2023/04/Melbet-Logo.png',
+            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Melbet_logo.svg/1200px-Melbet_logo.svg.png',
             rating: 4.7,
             bonusText: 'First Deposit Bonus 100%',
             affiliateUrl: 'https://melbet.com',
@@ -31,7 +36,7 @@ async function main() {
         },
         {
             name: 'Betway',
-            logoUrl: 'https://logos-world.net/wp-content/uploads/2023/04/Betway-Logo.png',
+            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/Betway_Logo.svg/1200px-Betway_Logo.svg.png',
             rating: 4.6,
             bonusText: 'Bet $10 Get $30 in Free Bets',
             affiliateUrl: 'https://betway.com',
@@ -39,7 +44,7 @@ async function main() {
         },
         {
             name: '888Sport',
-            logoUrl: 'https://logos-world.net/wp-content/uploads/2023/04/888sport-Logo.png',
+            logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/888_holdings_logo.svg/1200px-888_holdings_logo.svg.png',
             rating: 4.5,
             bonusText: 'Bet $10 Get $30 + $10 Casino Bonus',
             affiliateUrl: 'https://www.888sport.com',

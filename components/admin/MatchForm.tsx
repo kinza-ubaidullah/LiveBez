@@ -74,10 +74,19 @@ export default function MatchForm({ match, languages, leagues = [], isNew = fals
     const [slugStatus, setSlugStatus] = useState<Record<string, 'idle' | 'checking' | 'unique' | 'taken'>>({});
 
     const handleTransChange = (field: string, value: any) => {
-        setTranslations(prev => ({
-            ...prev,
-            [activeLang]: { ...prev[activeLang], [field]: value }
-        }));
+        setTranslations(prev => {
+            const newTrans = { ...prev[activeLang], [field]: value };
+
+            // Auto-generate slug from name if slug is empty and we're editing name
+            if (field === 'name' && !newTrans.slug) {
+                newTrans.slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + activeLang;
+            }
+
+            return {
+                ...prev,
+                [activeLang]: newTrans
+            };
+        });
     };
 
     const validateSlug = async (slug: string) => {
@@ -461,16 +470,28 @@ export default function MatchForm({ match, languages, leagues = [], isNew = fals
                         <div className="space-y-6">
                             <div className="flex justify-end">
                                 {(() => {
-                                    const leagueSlug = match?.league?.translations?.find((lt: any) => lt.languageCode === activeLang)?.slug || "league";
+                                    const leagueSlug = match?.league?.slug || "any";
+                                    const matchSlug = currentTrans.slug || `${homeTeam.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-vs-${awayTeam.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${activeLang}`;
+
                                     return (
-                                        <a
-                                            href={`/${activeLang}/league/${leagueSlug}/${currentTrans.slug}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
-                                        >
-                                            View Live <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                        </a>
+                                        <div className="flex flex-col gap-2">
+                                            <a
+                                                href={`/${activeLang}/league/${leagueSlug}/${matchSlug}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1"
+                                            >
+                                                View Live (League Route) <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                            </a>
+                                            <a
+                                                href={`/${activeLang}/match/${matchSlug}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] font-bold text-slate-400 hover:underline uppercase tracking-widest flex items-center gap-1"
+                                            >
+                                                View Live (Direct Match) <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                            </a>
+                                        </div>
                                     );
                                 })()}
                             </div>

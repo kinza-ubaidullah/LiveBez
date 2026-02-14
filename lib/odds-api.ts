@@ -1,10 +1,14 @@
-/**
- * The Odds API Client
- * Provides methods for fetching live scores, odds, and events from The Odds API v4
- */
+import { config } from 'dotenv';
+
+// Try to load .env if we are running in a script environment
+try {
+    config();
+} catch (e) {
+    // Ignore error if dotenv is not available or fails
+}
 
 const BASE_URL = 'https://api.the-odds-api.com/v4';
-const API_KEY = process.env.THE_ODDS_API_KEY;
+const API_KEY = process.env.THE_ODDS_API_KEY?.trim();
 
 export interface OddsApiResponse<T> {
     data: T;
@@ -70,12 +74,16 @@ class OddsApiClient {
 
     constructor() {
         if (!API_KEY) {
-            console.warn('THE_ODDS_API_KEY is not set. API calls will fail.');
+            console.warn('⚠️ THE_ODDS_API_KEY is not set in environment variables. API calls will fail.');
         }
         this.apiKey = API_KEY || '';
     }
 
     private async request<T>(endpoint: string, params: Record<string, string> = {}, revalidate: number = 60): Promise<OddsApiResponse<T>> {
+        if (!this.apiKey) {
+            throw new Error('MISSING_API_KEY: THE_ODDS_API_KEY is not configured.');
+        }
+
         const url = new URL(`${BASE_URL}${endpoint}`);
         url.searchParams.set('apiKey', this.apiKey);
 
@@ -83,39 +91,77 @@ class OddsApiClient {
             url.searchParams.set(key, value);
         }
 
-        console.log(`📡 Odds API Request: ${url.toString().replace(this.apiKey, 'HIDDEN')}`);
+        const hiddenUrl = url.toString().replace(this.apiKey, '***' + this.apiKey.slice(-4));
+        console.log(`📡 Odds API Request: ${hiddenUrl}`);
 
-        try {
-            const response = await fetch(url.toString(), {
-                next: { revalidate }
-            });
+        const maxRetries = 3;
+        const timeout = 12000; // 12 seconds
 
-            if (response.status === 429) {
-                console.error('Odds API rate limit exceeded');
-                throw new Error('API_RATE_LIMIT_EXCEEDED');
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                const response = await fetch(url.toString(), {
+                    next: { revalidate },
+                    signal: controller.signal,
+                } as any);
+
+                clearTimeout(timeoutId);
+
+                if (response.status === 401 || response.status === 403) {
+                    console.error('❌ Odds API: Unauthorized/Invalid API Key');
+                    throw new Error('API_KEY_INVALID');
+                }
+
+                if (response.status === 429) {
+                    console.error('❌ Odds API: Rate limit exceeded');
+                    throw new Error('API_RATE_LIMIT_EXCEEDED');
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'No error body');
+                    throw new Error(`API request failed [${response.status} ${response.statusText}]: ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                return {
+                    data,
+                    remainingRequests: parseInt(response.headers.get('x-requests-remaining') || '0'),
+                    usedRequests: parseInt(response.headers.get('x-requests-used') || '0'),
+                };
+            } catch (error: any) {
+                const isLastAttempt = attempt === maxRetries;
+                const isNetworkError = error.code === 'ENOTFOUND' ||
+                    error.cause?.code === 'ENOTFOUND' ||
+                    error.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+                    error.name === 'AbortError' ||
+                    error.message.includes('fetch failed');
+
+                if (isNetworkError) {
+                    console.warn(`⚠️ Odds API attempt ${attempt}/${maxRetries} failed: ${error.cause?.code || error.name || error.message}`);
+
+                    if (isLastAttempt) {
+                        console.error(`❌ Odds API: Connectivity error. Cannot reach ${BASE_URL}. Check your internet connection or DNS.`);
+                        throw new Error('API_NETWORK_ERROR');
+                    }
+
+                    // Exponential backoff
+                    const backoffMs = Math.pow(2, attempt - 1) * 1500;
+                    console.log(`⏳ Retrying in ${backoffMs}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                    continue;
+                }
+
+                console.error('❌ Odds API request failed:', error.message || error);
+                throw error;
             }
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            return {
-                data,
-                remainingRequests: parseInt(response.headers.get('x-requests-remaining') || '0'),
-                usedRequests: parseInt(response.headers.get('x-requests-used') || '0'),
-            };
-        } catch (error: any) {
-            // Handle network errors gracefully
-            if (error.code === 'ENOTFOUND' || error.cause?.code === 'ENOTFOUND') {
-                console.error('Odds API: Network error - cannot reach api.the-odds-api.com');
-                throw new Error('API_NETWORK_ERROR');
-            }
-            console.error('Odds API request failed:', error.message || error);
-            throw error;
         }
+
+        throw new Error('API_NETWORK_ERROR');
     }
+
 
     /**
      * Get all available sports

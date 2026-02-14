@@ -98,6 +98,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
                                     required
                                     type="text"
                                     placeholder="Full Name"
+                                    suppressHydrationWarning
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all dark:text-white"
@@ -110,6 +111,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
                                     required
                                     type="email"
                                     placeholder="E-mail"
+                                    suppressHydrationWarning
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all dark:text-white"
@@ -122,6 +124,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }: Regi
                                     required
                                     type="password"
                                     placeholder="Password"
+                                    suppressHydrationWarning
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all dark:text-white"

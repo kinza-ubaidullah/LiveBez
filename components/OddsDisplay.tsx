@@ -26,15 +26,22 @@ export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl
     useEffect(() => {
         const fetchOdds = async () => {
             try {
+                // Try fetching from multiple sports if needed or use the specific one
                 const res = await fetch(`/api/odds?sport=${sportKey}&markets=h2h,totals`);
                 const data = await res.json();
 
                 if (data.success && data.data) {
-                    // Find the event that matches our teams
-                    const event = data.data.find((e: any) =>
-                        (e.homeTeam === homeTeam || e.homeTeam.includes(homeTeam.split(' ')[0])) &&
-                        (e.awayTeam === awayTeam || e.awayTeam.includes(awayTeam.split(' ')[0]))
-                    );
+                    // Normalize names for better matching
+                    const normalizeMatch = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    const h1 = normalizeMatch(homeTeam);
+                    const a1 = normalizeMatch(awayTeam);
+
+                    // Find the event with robust matching
+                    const event = data.data.find((e: any) => {
+                        const eh = normalizeMatch(e.homeTeam);
+                        const ea = normalizeMatch(e.awayTeam);
+                        return (eh.includes(h1) || h1.includes(eh)) && (ea.includes(a1) || a1.includes(ea));
+                    });
 
                     if (event?.odds) {
                         setOdds(event.odds);
@@ -74,9 +81,30 @@ export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl
         );
     }
 
-    const homeOdds = odds.h2h[homeTeam] || Object.values(odds.h2h).find((_, i) => i === 0);
-    const drawOdds = odds.h2h['Draw'];
-    const awayOdds = odds.h2h[awayTeam] || Object.values(odds.h2h).find((_, i) => i === 2);
+    // Reliable mapping strategy
+    const entries = Object.entries(odds.h2h);
+    const drawEntry = entries.find(([k]) => k === 'Draw');
+    const otherEntries = entries.filter(([k]) => k !== 'Draw');
+
+    let homeEntry = otherEntries[0]; // Default assumptions
+    let awayEntry = otherEntries[1];
+
+    if (otherEntries.length >= 2) {
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const h = normalize(homeTeam);
+        const a = normalize(awayTeam);
+
+        // Try to find exact or fuzzy matches
+        const homeMatch = otherEntries.find(([k]) => normalize(k).includes(h) || h.includes(normalize(k)));
+        const awayMatch = otherEntries.find(([k]) => normalize(k).includes(a) || a.includes(normalize(k)));
+
+        if (homeMatch) homeEntry = homeMatch;
+        if (awayMatch) awayEntry = awayMatch;
+    }
+
+    const homeOdds = homeEntry ? homeEntry[1] : null;
+    const drawOdds = drawEntry ? drawEntry[1] : null;
+    const awayOdds = awayEntry ? awayEntry[1] : null;
 
     return (
         <div className="bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-700">

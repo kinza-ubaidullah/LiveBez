@@ -21,10 +21,11 @@ export async function getFullMatchDetails(matchId: string, apiSportsId: string) 
     }
 
     try {
-        const [stats, lineups, fixture] = await Promise.all([
+        const [stats, lineups, fixture, predictions] = await Promise.all([
             apiSports.getFixtureStatistics(apiSportsId),
             apiSports.getLineups(apiSportsId),
-            apiSports.getFixture(apiSportsId)
+            apiSports.getFixture(apiSportsId),
+            apiSports.getPredictions(apiSportsId)
         ]);
 
         let h2hData = null;
@@ -39,6 +40,8 @@ export async function getFullMatchDetails(matchId: string, apiSportsId: string) 
                 stats: JSON.stringify(stats),
                 lineups: JSON.stringify(lineups),
                 h2h: JSON.stringify(h2hData),
+                comparison: JSON.stringify(predictions?.comparison || null),
+                predictionsFull: JSON.stringify(predictions || null),
                 status: fixture?.fixture?.status?.short || match.status,
                 homeScore: fixture?.goals?.home ?? match.homeScore,
                 awayScore: fixture?.goals?.away ?? match.awayScore,

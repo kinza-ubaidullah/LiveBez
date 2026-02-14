@@ -1,5 +1,6 @@
 import prisma from "@/lib/db";
 import Link from "next/link";
+import BulkAIButton from "@/components/admin/BulkAIButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +19,14 @@ export default async function AnalysisManagerPage() {
 
     return (
         <div className="max-w-7xl pb-24">
-            <header className="mb-12">
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">Editorial Control</div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase">
-                    Analysis <span className="text-blue-600 underline underline-offset-8 decoration-4">Drafts</span>
-                </h1>
+            <header className="mb-12 flex items-center justify-between gap-6">
+                <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">Editorial Control</div>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase">
+                        Analysis <span className="text-blue-600 underline underline-offset-8 decoration-4">Drafts</span>
+                    </h1>
+                </div>
+                <BulkAIButton />
             </header>
 
             <div className="grid grid-cols-1 gap-6">

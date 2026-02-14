@@ -21,8 +21,8 @@ model Language {
   leagueTranslations     LeagueTranslation[]
   matchTranslations      MatchTranslation[]
   predictionTranslations PredictionTranslation[]
-  teamTranslations       TeamTranslation[]
   staticPageTranslations StaticPageTranslation[]
+  teamTranslations       TeamTranslation[]
 }
 
 model StaticPage {
@@ -38,7 +38,7 @@ model StaticPageTranslation {
   pageId       String
   languageCode String
   title        String
-  content      String     @db.Text
+  content      String
   seoId        String?    @unique
   language     Language   @relation(fields: [languageCode], references: [code])
   page         StaticPage @relation(fields: [pageId], references: [id])
@@ -60,22 +60,23 @@ model SiteSettings {
 }
 
 model SeoFields {
-  id                  String                      @id @default(cuid())
-  title               String?
-  description         String?
-  h1                  String?
-  canonical           String?
-  ogTitle             String?
-  ogDescription       String?
-  ogImage             String?
-  noIndex             Boolean                     @default(false)
-  jsonLd              String?
-  categoryTranslation ArticleCategoryTranslation?
-  articleTranslation  ArticleTranslation?
-  leagueTranslation   LeagueTranslation?
-  matchTranslation    MatchTranslation?
-  teamTranslation     TeamTranslation?
+  id                    String                      @id @default(cuid())
+  title                 String?
+  description           String?
+  h1                    String?
+  canonical             String?
+  ogTitle               String?
+  ogDescription         String?
+  ogImage               String?
+  noIndex               Boolean                     @default(false)
+  jsonLd                String?
+  categoryTranslation   ArticleCategoryTranslation?
+  articleTranslation    ArticleTranslation?
+  bookmakerTranslation  BookmakerTranslation?
+  leagueTranslation     LeagueTranslation?
+  matchTranslation      MatchTranslation?
   staticPageTranslation StaticPageTranslation?
+  teamTranslation       TeamTranslation?
 }
 
 model League {
@@ -108,34 +109,36 @@ model LeagueTranslation {
 }
 
 model Match {
-  id           String             @id @default(cuid())
-  date         DateTime
-  homeTeam     String
-  awayTeam     String
-  homeScore    Int?
-  awayScore    Int?
-  leagueId     String
-  status       String             @default("SCHEDULED")
-  minute       Int?
-  apiSportsId  String?
-  lineups      String?
-  stats        String?
-  homeTeamLogo String?
-  awayTeamLogo String?
-  mainTip      String?
-  confidence   Int?
-  isFeatured   Boolean            @default(false)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  h2h          String?
-  awayTeamId   String?
-  homeTeamId   String?
-  articles     Article[]
-  awayTeamRel  Team?              @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  homeTeamRel  Team?              @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  league       League             @relation(fields: [leagueId], references: [id])
-  translations MatchTranslation[]
-  prediction   Prediction?
+  id              String             @id @default(cuid())
+  date            DateTime
+  homeTeam        String
+  awayTeam        String
+  homeScore       Int?
+  awayScore       Int?
+  leagueId        String
+  status          String             @default("SCHEDULED")
+  minute          Int?
+  apiSportsId     String?
+  lineups         String?
+  stats           String?
+  homeTeamLogo    String?
+  awayTeamLogo    String?
+  mainTip         String?
+  confidence      Int?
+  isFeatured      Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  h2h             String?
+  awayTeamId      String?
+  homeTeamId      String?
+  comparison      String?
+  predictionsFull String?
+  articles        Article[]
+  awayTeamRel     Team?              @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeTeamRel     Team?              @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  league          League             @relation(fields: [leagueId], references: [id])
+  translations    MatchTranslation[]
+  prediction      Prediction?
 }
 
 model MatchTranslation {
@@ -289,11 +292,14 @@ model BookmakerTranslation {
   languageCode String
   name         String
   bonusText    String
-  sampleOdds   String?
-  description  String?
   affiliateUrl String
+  description  String?
+  sampleOdds   String?
+  seoId        String    @unique
+  slug         String    @unique
   bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id])
   language     Language  @relation(fields: [languageCode], references: [code])
+  seo          SeoFields @relation(fields: [seoId], references: [id])
 
   @@unique([bookmakerId, languageCode])
 }

@@ -1,27 +1,31 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require('dotenv').config();
+const dotenv = require("dotenv");
+dotenv.config();
 
-async function listModels() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    const genAI = new GoogleGenerativeAI(apiKey.trim());
+const apiKey = process.env.GEMINI_API_KEY;
 
-    try {
-        // Unfortunately the direct listModels is not in the main class as a simple method in all versions
-        // but we can try to fetch it via fetch if needed.
-        // Actually, let's just try "gemini-pro" which is very standard.
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const result = await model.generateContent("test");
-        console.log("Gemini-pro works!");
-    } catch (e) {
-        console.error("Gemini-pro failed:", e.message);
+async function testGemini() {
+    if (!apiKey) {
+        console.error("GEMINI_API_KEY not found in .env");
+        process.exit(1);
     }
-
+    console.log("Testing Gemini API with key:", apiKey.substring(0, 5) + "...");
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-        const result = await model.generateContent("test");
-        console.log("Gemini-1.5-flash-latest works!");
-    } catch (e) {
-        console.error("Gemini-1.5-flash-latest failed:", e.message);
+        const genAI = new GoogleGenerativeAI(apiKey.trim());
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent("Test");
+        const response = await result.response;
+        console.log("Gemini Response:", response.text());
+        console.log("✅ Gemini API is working properly!");
+    } catch (error) {
+        console.error("❌ Gemini API Error Details:");
+        console.error("Message:", error.message);
+        if (error.response) {
+            console.error("Status:", error.response.status);
+            console.error("StatusText:", error.response.statusText);
+        }
+        process.exit(1);
     }
 }
-listModels();
+
+testGemini();

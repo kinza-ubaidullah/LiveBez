@@ -45,11 +45,8 @@ export async function generateMatchAnalysis(matchData: {
     if (apiKey) {
         const modelsToTry = [
             "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-pro",
-            "gemini-pro"
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
         ];
         let lastError = null;
 
@@ -64,9 +61,9 @@ export async function generateMatchAnalysis(matchData: {
                     console.log(`✔ AI analysis generated using ${modelName}`);
                     return text.replace(/```html/g, "").replace(/```/g, "").trim();
                 }
-            } catch (error) {
+            } catch (error: any) {
                 lastError = error;
-                console.warn(`Model ${modelName} failed, trying next...`);
+                console.warn(`Model ${modelName} failed: ${error.message || 'Unknown error'}`);
             }
         }
         console.error("All Gemini models failed. Using dynamic template fallback.");

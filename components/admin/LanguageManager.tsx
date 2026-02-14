@@ -49,8 +49,8 @@ export default function LanguageManager({ initialLanguages }: { initialLanguages
                                     onClick={() => handleToggle(lang.code, lang.isVisible)}
                                     disabled={loading === lang.code}
                                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${lang.isVisible
-                                            ? 'bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500'
-                                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'
+                                        ? 'bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20'
                                         }`}
                                 >
                                     {loading === lang.code ? 'Processing...' : lang.isVisible ? 'Hide Version' : 'Go Public'}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { updateStaticPage } from "@/lib/actions/static-page-actions";
+import TipTapEditor from "./TipTapEditor";
 
 export default function StaticPageForm({ page, languages }: { page: any, languages: any[] }) {
     const [activeLang, setActiveLang] = useState(languages[0]?.code || 'en');
@@ -16,6 +17,8 @@ export default function StaticPageForm({ page, languages }: { page: any, languag
             initialData[lang.code] = {
                 title: trans?.title || "",
                 content: trans?.content || "",
+                seoTitle: trans?.seo?.title || "",
+                seoDescription: trans?.seo?.description || "",
             };
         });
         setFormData(initialData);
@@ -45,6 +48,8 @@ export default function StaticPageForm({ page, languages }: { page: any, languag
         }));
     };
 
+    const currentData = formData[activeLang] || { title: "", content: "", seoTitle: "", seoDescription: "" };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
             {status && (
@@ -66,50 +71,70 @@ export default function StaticPageForm({ page, languages }: { page: any, languag
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <div className="premium-card p-10 bg-white border-none shadow-sm space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <div className="lg:col-span-3 space-y-8">
+                    <div className="premium-card p-10 bg-white border-none shadow-sm space-y-8">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Page Title ({activeLang})</label>
                             <input
                                 type="text"
-                                value={formData[activeLang]?.title || ""}
+                                value={currentData.title}
                                 onChange={e => handleFieldChange(activeLang, 'title', e.target.value)}
-                                className="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all font-bold"
+                                className="w-full p-4 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-2xl"
                                 placeholder="Enter page title"
                             />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Content ({activeLang})</label>
-                            <textarea
-                                value={formData[activeLang]?.content || ""}
-                                onChange={e => handleFieldChange(activeLang, 'content', e.target.value)}
-                                className="w-full p-6 h-[500px] rounded-xl border border-slate-100 bg-slate-50 focus:bg-white outline-none font-medium resize-none"
-                                placeholder="Enter page content (HTML or Markdown supported depending on implementation)"
+                            <TipTapEditor
+                                content={currentData.content}
+                                onChange={(content) => handleFieldChange(activeLang, 'content', content)}
                             />
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-8">
-                    <div className="premium-card p-8 bg-blue-600 text-white border-none shadow-2xl sticky top-36">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-black italic">i</div>
-                            <div>
-                                <h4 className="text-sm font-black uppercase tracking-widest">Publish Page</h4>
-                                <p className="text-[10px] text-blue-200">Slug: /{page.slug}</p>
-                            </div>
+                    <div className="premium-card p-8 bg-slate-900 border-none shadow-xl text-white space-y-6">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">SEO Management</h4>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta Title</label>
+                            <input
+                                type="text"
+                                value={currentData.seoTitle}
+                                onChange={e => handleFieldChange(activeLang, 'seoTitle', e.target.value)}
+                                className="w-full p-3 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none focus:border-blue-500 transition-all text-xs font-bold"
+                                placeholder="SEO Title"
+                            />
                         </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meta Description</label>
+                            <textarea
+                                value={currentData.seoDescription}
+                                onChange={e => handleFieldChange(activeLang, 'seoDescription', e.target.value)}
+                                className="w-full p-3 h-32 rounded-lg border border-slate-700 bg-slate-800 text-white outline-none focus:border-blue-500 transition-all text-xs font-bold resize-none"
+                                placeholder="Description for search engines..."
+                            />
+                        </div>
+
                         <button
                             disabled={loading}
-                            className="w-full bg-white text-blue-600 py-5 rounded-xl font-black uppercase tracking-widest hover:bg-blue-50 transition-all disabled:opacity-50 shadow-xl shadow-blue-900/30"
+                            className="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase tracking-widest hover:bg-blue-500 transition-all disabled:opacity-50"
                         >
-                            {loading ? "Updating..." : "Save Changes"}
+                            {loading ? "Saving..." : "Save Changes"}
                         </button>
+
+                        <div className="pt-4 border-t border-slate-800">
+                            <p className="text-[10px] text-slate-500 uppercase font-black">Route Slug</p>
+                            <p className="text-sm font-mono text-blue-400">/{page.slug}</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </form>
     );
 }
+

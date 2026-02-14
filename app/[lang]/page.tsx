@@ -85,10 +85,10 @@ export default async function Home({
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    matches = await safeFetch(prisma.match?.findMany({
+    matches = await safeFetch(prisma.match.findMany({
         where: {
             date: { gte: startOfDay, lte: endOfDay },
-            translations: { some: { languageCode: lang, status: 'PUBLISHED' } }
+            translations: { some: { languageCode: lang } }
         },
         include: {
             translations: { where: { languageCode: lang } },

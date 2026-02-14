@@ -6,7 +6,11 @@ export default async function EditStaticPage({ params }: { params: Promise<{ id:
     const { id } = await params;
     const page = await prisma.staticPage.findUnique({
         where: { id },
-        include: { translations: true }
+        include: {
+            translations: {
+                include: { seo: true }
+            }
+        }
     });
 
     if (!page) notFound();

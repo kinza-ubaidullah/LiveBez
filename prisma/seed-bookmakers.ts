@@ -61,12 +61,24 @@ async function seedBookmakers() {
                 rating: bm.rating,
                 logoUrl: bm.logoUrl,
                 translations: {
-                    create: languages.map(lang => ({
-                        languageCode: lang.code,
-                        name: bm.translations[lang.code as keyof typeof bm.translations]?.name || bm.translations.en.name,
-                        bonusText: bm.translations[lang.code as keyof typeof bm.translations]?.bonusText || bm.translations.en.bonusText,
-                        affiliateUrl: bm.translations[lang.code as keyof typeof bm.translations]?.affiliateUrl || bm.translations.en.affiliateUrl,
-                    }))
+                    create: languages.map(lang => {
+                        const name = bm.translations[lang.code as keyof typeof bm.translations]?.name || bm.translations.en.name;
+                        return {
+                            name: name,
+                            slug: `${bm.translations.en.name.toLowerCase()}-${lang.code}`,
+                            bonusText: bm.translations[lang.code as keyof typeof bm.translations]?.bonusText || bm.translations.en.bonusText,
+                            affiliateUrl: bm.translations[lang.code as keyof typeof bm.translations]?.affiliateUrl || bm.translations.en.affiliateUrl,
+                            language: {
+                                connect: { code: lang.code }
+                            },
+                            seo: {
+                                create: {
+                                    title: `${name} | Best Betting Bonus`,
+                                    description: `Join ${name} now and get ${bm.translations.en.bonusText}. Best odds and coverage.`
+                                }
+                            }
+                        };
+                    })
                 }
             }
         });

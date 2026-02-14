@@ -112,6 +112,16 @@ export default function LiveMatchHeader({ matchId, initialData, lang, t }: LiveM
                                 <span className="text-xs md:text-3xl text-slate-200 font-light">—</span>
                                 <span className="text-slate-900 drop-shadow-sm">{match.awayScore ?? '0'}</span>
                             </div>
+
+                            {/* Predicted Score Badge */}
+                            {!isMatchLive && match.prediction?.advice && (
+                                <div className="mt-4 flex flex-col items-center gap-1">
+                                    <div className="px-4 py-1.5 bg-slate-900 dark:bg-blue-600 rounded-full text-white text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl">
+                                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                                        <span>Predicted: {match.prediction.advice}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="text-[7px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest md:tracking-[0.4em] whitespace-nowrap bg-slate-50 px-3 py-1 md:px-6 md:py-2 rounded-full inline-block">
                             {new Date(match.date).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })} • {new Date(match.date).toLocaleDateString(lang, { day: '2-digit', month: 'short' })}
