@@ -90,6 +90,7 @@ model League {
   articles     Article[]
   translations LeagueTranslation[]
   matches      Match[]
+  standings    String?
 }
 
 model LeagueTranslation {
@@ -129,6 +130,7 @@ model Match {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   h2h             String?
+  events          String?
   awayTeamId      String?
   homeTeamId      String?
   comparison      String?

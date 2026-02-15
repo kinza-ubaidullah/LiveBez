@@ -2,7 +2,7 @@ import prisma from "@/lib/db";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
-export default async function StaticPageTemplate({ slug, lang }: { slug: string, lang: string }) {
+export default async function StaticPageTemplate({ slug, lang, hideTitle = false }: { slug: string, lang: string, hideTitle?: boolean }) {
     const page = await prisma.staticPage.findUnique({
         where: { slug },
         include: {
@@ -22,40 +22,43 @@ export default async function StaticPageTemplate({ slug, lang }: { slug: string,
     return (
         <div className="min-h-screen bg-white dark:bg-slate-950">
             {/* Header / Hero Section */}
-            <div className="relative overflow-hidden bg-slate-900 border-b border-white/5">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(37,99,235,0.4),transparent)]" />
-                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(#2563eb 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
-                </div>
-
-                <div className="container mx-auto px-6 py-24 lg:py-40 relative z-10 text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 animate-pulse">
-                        <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                        </span>
-                        Corporate Identity
+            {!hideTitle && (
+                <div className="relative overflow-hidden bg-slate-900 border-b border-white/5">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(37,99,235,0.4),transparent)]" />
+                        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `radial-gradient(#2563eb 1px, transparent 0)`, backgroundSize: '40px 40px' }} />
                     </div>
-                    <h1 className="text-6xl lg:text-9xl font-black text-white tracking-tighter uppercase italic leading-[0.85]">
-                        {translation.title.split('|')[0]}
-                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500 drop-shadow-[0_0_30px_rgba(37,99,235,0.3)] mt-2">
-                            {translation.title.split('|')[1] || translation.title}
-                        </span>
-                    </h1>
 
-                    <div className="mt-12 flex items-center justify-center gap-6 text-[11px] font-black uppercase tracking-widest text-slate-500">
-                        <div className="flex items-center gap-2">
-                            <span className="text-white">Active</span>
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    <div className="container mx-auto px-6 py-24 lg:py-40 relative z-10 text-center">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 animate-pulse">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                            </span>
+                            Corporate Identity
                         </div>
-                        <div className="w-px h-4 bg-slate-800" />
-                        <div>EST. 2024</div>
-                        <div className="w-px h-4 bg-slate-800" />
-                        <div>v{page.updatedAt.getFullYear()} Release</div>
+                        <h1 className="text-6xl lg:text-9xl font-black text-white tracking-tighter uppercase italic leading-[0.85]">
+                            {translation.title.split('|')[0]}
+                            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500 drop-shadow-[0_0_30px_rgba(37,99,235,0.3)] mt-2">
+                                {translation.title.split('|')[1] || translation.title}
+                            </span>
+                        </h1>
+
+                        <div className="mt-12 flex items-center justify-center gap-6 text-[11px] font-black uppercase tracking-widest text-slate-500">
+                            <div className="flex items-center gap-2">
+                                <span className="text-white">Active</span>
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            </div>
+                            <div className="w-px h-4 bg-slate-800" />
+                            <div>EST. 2024</div>
+                            <div className="w-px h-4 bg-slate-800" />
+                            <div>v{page.updatedAt.getFullYear()} Release</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
 
             {/* Main Content Body */}
             <div className="container mx-auto px-6 py-20 lg:py-32 max-w-7xl">

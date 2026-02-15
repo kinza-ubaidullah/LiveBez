@@ -51,7 +51,7 @@ export default function LineupsTab({ lineupsJson }: LineupsTabProps) {
                         <div>
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 border-b border-slate-50 dark:border-slate-800 pb-2">Starting Eleven</h4>
                             <div className="space-y-4">
-                                {teamLineup.startXI.map((item: any) => (
+                                {teamLineup.startXI?.map((item: any) => (
                                     <div key={item.player.id} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-4">
                                             <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 group-hover:bg-primary group-hover:text-white transition-colors">
@@ -71,7 +71,7 @@ export default function LineupsTab({ lineupsJson }: LineupsTabProps) {
                         <div>
                             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 border-b border-slate-50 dark:border-slate-800 pb-2">Substitutes</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                {teamLineup.substitutes.map((item: any) => (
+                                {teamLineup.substitutes?.map((item: any) => (
                                     <div key={item.player.id} className="flex items-center gap-3">
                                         <span className="text-[9px] font-black text-slate-400 w-4">{item.player.number}</span>
                                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{item.player.name}</span>

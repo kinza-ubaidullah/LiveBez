@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiSports } from "@/lib/sports-api";
+import prisma from "@/lib/db";
+import { calculateLiveProbability } from "@/lib/live-algorithm";
 
 export async function GET() {
     try {
@@ -12,19 +14,82 @@ export async function GET() {
             return NextResponse.json({ success: true, data: [] });
         }
 
-        const formattedMatches = liveMatches.map((m: any) => ({
-            id: m.fixture.id,
-            homeTeam: m.teams.home.name,
-            awayTeam: m.teams.away.name,
-            homeScore: m.goals.home ?? 0,
-            awayScore: m.goals.away ?? 0,
-            time: m.fixture.status.elapsed ? `${m.fixture.status.elapsed}'` : 'LIVE',
-            status: 'LIVE' // Simplifying for the ticker
-        }));
+        // Get predictions for these matches from our DB
+        const apiMatchIds = liveMatches.map((m: any) => m.fixture.id.toString());
+        const dbMatches = await prisma.match.findMany({
+            where: { apiSportsId: { in: apiMatchIds } },
+            include: { prediction: true, translations: true }
+        });
 
-        return NextResponse.json({ success: true, data: formattedMatches });
+        const predictionsMap = new Map();
+        dbMatches.forEach(m => {
+            if (m.apiSportsId && m.prediction) {
+                predictionsMap.set(m.apiSportsId, m.prediction);
+            }
+        });
+
+        // Group by League
+        const leaguesMap = new Map();
+
+        liveMatches.forEach((m: any) => {
+            const leagueId = m.league.id;
+            const leagueName = m.league.name;
+            const leagueLogo = m.league.logo;
+
+            if (!leaguesMap.has(leagueId)) {
+                leaguesMap.set(leagueId, {
+                    id: leagueId,
+                    name: leagueName,
+                    logo: leagueLogo,
+                    matches: []
+                });
+            }
+
+            const pred = predictionsMap.get(m.fixture.id.toString());
+
+            // Apply Live Algorithm
+            let finalPredictions = null;
+            let liveTip = null;
+            if (pred) {
+                finalPredictions = calculateLiveProbability(
+                    { home: pred.winProbHome, draw: pred.winProbDraw, away: pred.winProbAway },
+                    { home: m.goals.home ?? 0, away: m.goals.away ?? 0 },
+                    m.fixture.status.elapsed,
+                    m.fixture.status.short
+                );
+
+                // Derive tip from live probabilities
+                if (finalPredictions.home >= 50) liveTip = "Home Win";
+                else if (finalPredictions.away >= 50) liveTip = "Away Win";
+                else if (finalPredictions.draw >= 50) liveTip = "Draw";
+                else if (finalPredictions.home > finalPredictions.away) liveTip = "Home or Draw";
+                else liveTip = "Away or Draw";
+            }
+
+            const matchSlug = dbMatches.find(d => d.apiSportsId === m.fixture.id.toString())?.translations[0]?.slug;
+
+            leaguesMap.get(leagueId).matches.push({
+                id: m.fixture.id,
+                homeTeam: m.teams.home.name,
+                homeTeamLogo: m.teams.home.logo,
+                awayTeam: m.teams.away.name,
+                awayTeamLogo: m.teams.away.logo,
+                homeScore: m.goals.home ?? 0,
+                awayScore: m.goals.away ?? 0,
+                time: m.fixture.status.elapsed ? `${m.fixture.status.elapsed}'` : 'LIVE',
+                status: m.fixture.status.short,
+                prediction: finalPredictions ?? null,
+                liveTip: liveTip,
+                matchSlug: matchSlug
+            });
+        });
+
+        const result = Array.from(leaguesMap.values());
+
+        return NextResponse.json({ success: true, data: result });
     } catch (error) {
         console.error("Live Score API Error:", error);
         return NextResponse.json({ success: false, error: "Failed to fetch live scores" }, { status: 500 });
     }
 }
+

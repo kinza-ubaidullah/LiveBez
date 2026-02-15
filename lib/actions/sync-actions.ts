@@ -28,16 +28,35 @@ export async function syncFixtures(sportKey: string = SOCCER_SPORTS.EPL): Promis
         // Get all languages for translations
         const languages = await prisma.language.findMany();
 
-        // Get league for this sport (or create placeholder)
+        // Get league for this sport
+        const targetApiId = getApiSportsLeagueId(sportKey).toString();
+
         let league = await prisma.league.findFirst({
             where: {
-                translations: {
-                    some: {
-                        slug: { contains: sportKey.replace('soccer_', '') }
+                OR: [
+                    { apiId: targetApiId },
+                    {
+                        translations: {
+                            some: {
+                                slug: { contains: sportKey.replace('soccer_', '').replace(/_/g, '-') }
+                            }
+                        }
                     }
-                }
+                ]
             }
         });
+
+        // Fallback for major leagues by name
+        if (!league) {
+            const leagueName = getSportTitle(sportKey, 'en');
+            league = await prisma.league.findFirst({
+                where: {
+                    translations: {
+                        some: { name: leagueName, languageCode: 'en' }
+                    }
+                }
+            });
+        }
 
         if (!league) {
             // Create a placeholder league

@@ -15,6 +15,7 @@ import LiveMatchHeader from "@/components/LiveMatchHeader";
 import NotifyButton from "@/components/NotifyButton";
 import MatchTabs from "@/components/MatchTabs";
 import { getFullMatchDetails } from "@/lib/match-service";
+import ValueAnalysis from "@/components/ValueAnalysis";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string, leagueSlug: string, matchSlug: string }> }) {
     const { lang, matchSlug } = await params;
@@ -163,6 +164,10 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                             comparison={matchData?.comparison || null}
                             predictionsFull={matchData?.predictionsFull || null}
                             analysis={matchTrans.status === 'PUBLISHED' ? matchTrans.analysis : null}
+                            events={(matchData as any)?.events || null}
+                            standings={(matchData as any)?.standings || null}
+                            homeTeamName={match.homeTeam}
+                            awayTeamName={match.awayTeam}
                             lang={lang}
                             t={t}
                         />
@@ -175,7 +180,7 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                                 </div>
                                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-white">Real-Time Market Comparison</h3>
                             </div>
-                            <OddsDisplay homeTeam={match.homeTeam} awayTeam={match.awayTeam} t={t} />
+                            <OddsDisplay fixtureId={match.apiSportsId} homeTeam={match.homeTeam} awayTeam={match.awayTeam} t={t} />
                         </div>
                     </div>
 
@@ -200,6 +205,13 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                                         homeTeam={match.homeTeam}
                                         awayTeam={match.awayTeam}
                                     />
+
+                                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                                        <ValueAnalysis
+                                            modelPredictions={matchData?.predictionsFull}
+                                            marketPredictions={prediction}
+                                        />
+                                    </div>
 
                                     <div className="grid grid-cols-3 gap-2 pt-6 border-t border-slate-100 dark:border-slate-800">
                                         {[

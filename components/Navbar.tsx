@@ -98,8 +98,10 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
                 </div>
             )
         },
+        { name: t.footer?.liveScoreGuide || "Live Score", href: `/${lang}/live-score`, icon: Activity, hasDropdown: false },
         {
             name: t.leagues?.title || "Leagues",
+
             href: `/${lang}/leagues`,
             icon: Trophy,
             hasDropdown: true,

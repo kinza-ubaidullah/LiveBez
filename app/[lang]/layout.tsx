@@ -73,7 +73,7 @@ export default async function LocaleLayout({
     const brandColor = settings?.globalBrandColor || "#2563eb";
 
     return (
-        <html lang={lang} dir={isRTL ? 'rtl' : 'ltr'} className="scroll-smooth" suppressHydrationWarning>
+        <html lang={lang} dir={isRTL ? 'rtl' : 'ltr'} className="scroll-smooth overflow-x-hidden" suppressHydrationWarning>
             <head>
                 {settings?.headScripts && (
                     <script dangerouslySetInnerHTML={{ __html: settings.headScripts }} />

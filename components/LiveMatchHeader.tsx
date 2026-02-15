@@ -122,6 +122,21 @@ export default function LiveMatchHeader({ matchId, initialData, lang, t }: LiveM
                                     </div>
                                 </div>
                             )}
+
+                            {/* Live Prediction Tip Badge */}
+                            {isMatchLive && match.prediction && (
+                                <div className="mt-4 flex flex-col items-center gap-1">
+                                    <div className="px-4 py-1.5 bg-yellow-400 text-slate-900 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl animate-bounce">
+                                        <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-ping" />
+                                        <span>Live Algorithm Tip: {
+                                            match.prediction.home >= 50 ? "Home Win" :
+                                                match.prediction.away >= 50 ? "Away Win" :
+                                                    match.prediction.draw >= 50 ? "Draw" :
+                                                        match.prediction.home > match.prediction.away ? "Home or Draw" : "Away or Draw"
+                                        }</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="text-[7px] md:text-[11px] font-black text-slate-400 uppercase tracking-widest md:tracking-[0.4em] whitespace-nowrap bg-slate-50 px-3 py-1 md:px-6 md:py-2 rounded-full inline-block">
                             {new Date(match.date).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })} • {new Date(match.date).toLocaleDateString(lang, { day: '2-digit', month: 'short' })}

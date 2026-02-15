@@ -1,78 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { oddsApi, SOCCER_SPORTS } from '@/lib/odds-api';
+import { apiSports } from '@/lib/sports-api';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 300; // Revalidate every 5 minutes
+export const revalidate = 600; // Revalidate every 10 minutes
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const sport = searchParams.get('sport') || SOCCER_SPORTS.EPL;
-    const markets = searchParams.get('markets') || 'h2h';
+    const fixtureId = searchParams.get('fixtureId');
+
+    if (!fixtureId) {
+        return NextResponse.json({ success: false, error: 'fixtureId is required' }, { status: 400 });
+    }
 
     try {
-        const response = await oddsApi.getOdds(sport, {
-            regions: 'eu,uk',
-            markets: markets,
+        const oddsData = await apiSports.getOdds(fixtureId);
+
+        // Transform API-Sports odds to our simplified structure
+        // API-Sports structure: response[0].bookmakers[].bets[]
+
+        if (!oddsData || oddsData.length === 0) {
+            return NextResponse.json({ success: true, odds: null });
+        }
+
+        const oddsItem = oddsData[0]; // Usually one item per fixture in response
+        const bookmakers = oddsItem?.bookmakers || [];
+
+        // Extract 1x2 and Over/Under
+        const bestOdds: any = { h2h: {}, totals: {} };
+
+        // Helper to update best odds
+        const updateBest = (marketType: 'h2h' | 'totals', key: string, price: number, bookmaker: string) => {
+            const current = bestOdds[marketType][key];
+            if (!current || price > current.price) {
+                bestOdds[marketType][key] = { price, bookmaker };
+            }
+        };
+
+        bookmakers.forEach((bk: any) => {
+            bk.bets.forEach((bet: any) => {
+                if (bet.id === 1) { // Match Winner
+                    bet.values.forEach((val: any) => {
+                        if (val.value === 'Home') updateBest('h2h', 'Home', parseFloat(val.odd), bk.name);
+                        else if (val.value === 'Away') updateBest('h2h', 'Away', parseFloat(val.odd), bk.name);
+                        else if (val.value === 'Draw') updateBest('h2h', 'Draw', parseFloat(val.odd), bk.name);
+                    });
+                } else if (bet.id === 5) { // Goals Over/Under
+                    bet.values.forEach((val: any) => {
+                        const key = `${val.value}`; // Over 2.5 etc
+                        updateBest('totals', key, parseFloat(val.odd), bk.name);
+                    });
+                }
+            });
         });
 
-        // Transform data for frontend consumption
-        const events = response.data.map(event => ({
-            id: event.id,
-            homeTeam: event.home_team,
-            awayTeam: event.away_team,
-            commenceTime: event.commence_time,
-            sportKey: event.sport_key,
-            sportTitle: event.sport_title,
-            odds: extractBestOdds(event.bookmakers, markets),
-            bookmakers: event.bookmakers.slice(0, 5), // Top 5 bookmakers
-        }));
+        // Rename keys to match frontend expectation
+        const formattedH2h: any = {};
+        if (bestOdds.h2h.Home) formattedH2h[oddsItem.league?.country === 'USA' ? oddsItem.teams?.home?.name : 'Home'] = bestOdds.h2h.Home; // Keep it simple: Home/Draw/Away match logic in frontend expects team names? 
+        // Actually frontend expects strictly keys that match team names OR just standard 1/X/2. 
+        // Let's standardise to Home/Away/Draw and let Frontend map it?
+        // Frontend logic: `const homeMatch = otherEntries.find...`
+        // Simplest is to map to Team Names if possible, but API-Sports just gives 'Home'.
+        // Let's rely on the frontend falling back or map it here if we have team names.
+        // API-Sports odds response usually doesn't have team names in the "odds" part, but we might pass them?
+        // Actually simpler: Just return standard keys 'Home', 'Draw', 'Away' and update Frontend to look for these explicitly if names fail.
+
+        // Wait, the frontend `OddsDisplay` uses fuzzy matching on team names. 
+        // Let's pass the raw bestOdds.h2h which has keys "Home", "Draw", "Away".
+        // And we need to ensure Frontend handles "Home"/"Away" keys.
 
         return NextResponse.json({
             success: true,
-            data: events,
-            quotaRemaining: response.remainingRequests,
+            odds: {
+                h2h: bestOdds.h2h,
+                totals: bestOdds.totals
+            }
         });
+
     } catch (error: any) {
-        console.error('Odds API error:', error);
-
-        if (error.message === 'API_RATE_LIMIT_EXCEEDED') {
-            return NextResponse.json(
-                { success: false, error: 'Rate limit exceeded' },
-                { status: 429 }
-            );
-        }
-
+        console.error('API-Sports Odds error:', error);
         return NextResponse.json(
             { success: false, error: 'Failed to fetch odds' },
             { status: 500 }
         );
     }
-}
-
-function extractBestOdds(bookmakers: any[], markets: string) {
-    const marketKeys = markets.split(',');
-    const bestOdds: Record<string, any> = {};
-
-    for (const marketKey of marketKeys) {
-        let best: Record<string, { price: number; bookmaker: string }> = {};
-
-        for (const bookmaker of bookmakers) {
-            const market = bookmaker.markets?.find((m: any) => m.key === marketKey);
-            if (!market) continue;
-
-            for (const outcome of market.outcomes) {
-                const key = outcome.name;
-                if (!best[key] || outcome.price > best[key].price) {
-                    best[key] = {
-                        price: outcome.price,
-                        bookmaker: bookmaker.title,
-                    };
-                }
-            }
-        }
-
-        bestOdds[marketKey] = best;
-    }
-
-    return bestOdds;
 }

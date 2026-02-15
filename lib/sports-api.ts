@@ -151,11 +151,17 @@ class ApiSportsClient {
         return response.response[0] || null;
     }
 
-    /**
-     * Get league standings
-     */
     async getStandings(leagueId: string, season: string = '2024'): Promise<any[]> {
         const response = await this.request<any[]>('/standings', { league: leagueId, season }, 86400); // 24hr cache
+        return response.response;
+    }
+
+    /**
+     * Get odds for a fixture
+     */
+    async getOdds(fixtureId: string): Promise<any[]> {
+        // Fetch pre-match odds
+        const response = await this.request<any[]>('/odds', { fixture: fixtureId }, 3600);
         return response.response;
     }
 
@@ -172,6 +178,14 @@ class ApiSportsClient {
      */
     async getFixtureStatistics(fixtureId: string): Promise<any[]> {
         const response = await this.request<any[]>('/fixtures/statistics', { fixture: fixtureId }, 60);
+        return response.response;
+    }
+
+    /**
+     * Get events for a fixture
+     */
+    async getFixtureEvents(fixtureId: string): Promise<any[]> {
+        const response = await this.request<any[]>('/fixtures/events', { fixture: fixtureId }, 60);
         return response.response;
     }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 interface OddsDisplayProps {
+    fixtureId?: string; // API-Sports fixture ID
     homeTeam: string;
     awayTeam: string;
     sportKey?: string;
@@ -18,34 +19,27 @@ interface OddsData {
     };
 }
 
-export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl', t }: OddsDisplayProps) {
+export default function OddsDisplay({ fixtureId, homeTeam, awayTeam, sportKey = 'soccer_epl', t }: OddsDisplayProps) {
     const [odds, setOdds] = useState<OddsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOdds = async () => {
+            if (!fixtureId) {
+                setLoading(false);
+                return;
+            }
+
             try {
-                // Try fetching from multiple sports if needed or use the specific one
-                const res = await fetch(`/api/odds?sport=${sportKey}&markets=h2h,totals`);
+                // Fetch from our internal API which now proxies to API-Sports
+                const res = await fetch(`/api/odds?fixtureId=${fixtureId}`);
                 const data = await res.json();
 
-                if (data.success && data.data) {
-                    // Normalize names for better matching
-                    const normalizeMatch = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    const h1 = normalizeMatch(homeTeam);
-                    const a1 = normalizeMatch(awayTeam);
-
-                    // Find the event with robust matching
-                    const event = data.data.find((e: any) => {
-                        const eh = normalizeMatch(e.homeTeam);
-                        const ea = normalizeMatch(e.awayTeam);
-                        return (eh.includes(h1) || h1.includes(eh)) && (ea.includes(a1) || a1.includes(ea));
-                    });
-
-                    if (event?.odds) {
-                        setOdds(event.odds);
-                    }
+                if (data.success && data.odds) {
+                    setOdds(data.odds);
+                } else {
+                    setError('No odds found');
                 }
             } catch (err) {
                 setError('Failed to load odds');
@@ -55,7 +49,7 @@ export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl
         };
 
         fetchOdds();
-    }, [homeTeam, awayTeam, sportKey]);
+    }, [fixtureId]);
 
     if (loading) {
         return (
@@ -83,23 +77,30 @@ export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl
 
     // Reliable mapping strategy
     const entries = Object.entries(odds.h2h);
-    const drawEntry = entries.find(([k]) => k === 'Draw');
-    const otherEntries = entries.filter(([k]) => k !== 'Draw');
 
-    let homeEntry = otherEntries[0]; // Default assumptions
-    let awayEntry = otherEntries[1];
+    // API-Sports typically returns keys: "Home", "Away", "Draw"
+    let homeEntry = entries.find(([k]) => k === 'Home');
+    let drawEntry = entries.find(([k]) => k === 'Draw');
+    let awayEntry = entries.find(([k]) => k === 'Away');
 
-    if (otherEntries.length >= 2) {
-        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const h = normalize(homeTeam);
-        const a = normalize(awayTeam);
+    // Fallback: If keys are team names (legacy or other providers), try fuzzy match
+    if (!homeEntry || !awayEntry) {
+        const otherEntries = entries.filter(([k]) => k !== 'Draw');
+        if (otherEntries.length >= 2) {
+            const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const h = normalize(homeTeam);
+            const a = normalize(awayTeam);
 
-        // Try to find exact or fuzzy matches
-        const homeMatch = otherEntries.find(([k]) => normalize(k).includes(h) || h.includes(normalize(k)));
-        const awayMatch = otherEntries.find(([k]) => normalize(k).includes(a) || a.includes(normalize(k)));
+            const homeMatch = otherEntries.find(([k]) => normalize(k).includes(h) || h.includes(normalize(k)));
+            const awayMatch = otherEntries.find(([k]) => normalize(k).includes(a) || a.includes(normalize(k)));
 
-        if (homeMatch) homeEntry = homeMatch;
-        if (awayMatch) awayEntry = awayMatch;
+            if (homeMatch) homeEntry = homeMatch;
+            if (awayMatch) awayEntry = awayMatch;
+
+            // If still not found, just take first and second? risky but better than nothing
+            if (!homeEntry) homeEntry = otherEntries[0];
+            if (!awayEntry) awayEntry = otherEntries[1];
+        }
     }
 
     const homeOdds = homeEntry ? homeEntry[1] : null;
@@ -150,7 +151,7 @@ export default function OddsDisplay({ homeTeam, awayTeam, sportKey = 'soccer_epl
             )}
 
             <p className="text-[10px] text-slate-400 mt-4 uppercase tracking-widest">
-                {t.ui.poweredBy}
+                {t.appName} Smart Odds Analytics
             </p>
         </div>
     );

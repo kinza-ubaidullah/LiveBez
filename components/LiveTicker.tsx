@@ -22,11 +22,19 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
     useEffect(() => {
         const fetchLiveScores = async () => {
             try {
-                const res = await fetch('/api/live-scores', { next: { revalidate: 30 } });
+                const res = await fetch('/api/live-scores');
                 const data = await res.json();
 
                 if (data.success && data.data?.length > 0) {
-                    const liveMatches: LiveMatch[] = data.data.map((game: any) => ({
+                    // Flatten grouped data if necessary
+                    const allMatches = data.data.reduce((acc: any[], league: any) => {
+                        if (league.matches) {
+                            return [...acc, ...league.matches];
+                        }
+                        return [...acc, league];
+                    }, []);
+
+                    const liveMatches: LiveMatch[] = allMatches.map((game: any) => ({
                         id: game.id,
                         homeTeam: game.homeTeam,
                         awayTeam: game.awayTeam,
@@ -47,6 +55,7 @@ export default function LiveTicker({ lang, t }: { lang: string, t: any }) {
                 setIsLive(false);
             }
         };
+
 
         fetchLiveScores();
         const interval = setInterval(fetchLiveScores, 30000);

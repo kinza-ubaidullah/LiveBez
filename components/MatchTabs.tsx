@@ -13,6 +13,9 @@ function cn(...inputs: any[]) {
     return twMerge(clsx(inputs));
 }
 
+import StandingsTab from "@/components/match-tabs/StandingsTab";
+import EventsTab from "@/components/match-tabs/EventsTab";
+
 interface MatchTabsProps {
     stats: string | null;
     lineups: string | null;
@@ -20,19 +23,27 @@ interface MatchTabsProps {
     comparison: string | null;
     predictionsFull: string | null;
     analysis: string | null;
+    events: string | null;
+    standings: string | null;
+    homeTeamName?: string;
+    awayTeamName?: string;
     lang: string;
     t: any;
 }
 
-export default function MatchTabs({ stats, lineups, h2h, comparison, predictionsFull, analysis, lang, t }: MatchTabsProps) {
+export default function MatchTabs({ stats, lineups, h2h, comparison, predictionsFull, analysis, events, standings, homeTeamName, awayTeamName, lang, t }: MatchTabsProps) {
     const hasLineups = !!lineups && lineups !== "null" && lineups !== "[]";
     const hasStats = !!stats && stats !== "null" && stats !== "[]";
     const hasH2H = !!h2h && h2h !== "null" && h2h !== "[]";
     const hasComparison = !!comparison && comparison !== "null";
+    const hasEvents = !!events && events !== "null" && events !== "[]";
+    const hasStandings = !!standings && standings !== "null" && standings !== "[]";
 
     const allTabs = [
         { id: "analysis", label: t.match.expertAnalysis || "Analysis", show: !!analysis },
         { id: "comparison", label: "Comparison", show: hasComparison },
+        { id: "events", label: "Timeline", show: hasEvents },
+        { id: "standings", label: "Standings", show: hasStandings },
         { id: "stats", label: t.match.stats || "Live Stats", show: hasStats },
         { id: "h2h", label: "H2H", show: hasH2H },
         { id: "lineups", label: t.match.lineups || "Lineups", show: hasLineups },
@@ -67,6 +78,12 @@ export default function MatchTabs({ stats, lineups, h2h, comparison, predictions
                 </div>
                 <div className={activeTab === "comparison" ? "block" : "hidden"}>
                     <ComparisonTab comparisonJson={comparison} predictionsFullJson={predictionsFull} />
+                </div>
+                <div className={activeTab === "events" ? "block" : "hidden"}>
+                    <EventsTab eventsJson={events} />
+                </div>
+                <div className={activeTab === "standings" ? "block" : "hidden"}>
+                    <StandingsTab standingsJson={standings} homeTeamName={homeTeamName} awayTeamName={awayTeamName} />
                 </div>
                 <div className={activeTab === "stats" ? "block" : "hidden"}>
                     <StatsTab statsJson={stats} />
