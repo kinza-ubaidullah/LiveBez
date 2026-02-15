@@ -135,7 +135,7 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
             )
         },
         {
-            name: t.ui?.bettingTips || "Bookies",
+            name: t.bookmakers?.title || "Bookies",
             href: `/${lang}/bookmakers`,
             icon: Zap,
             hasDropdown: true,

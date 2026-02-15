@@ -176,26 +176,22 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
 
                                 {/* Live Analytics / Footer */}
                                 <div className="bg-slate-50 dark:bg-slate-950 p-4 border-t border-slate-100 dark:border-slate-800">
-                                    {match.liveTip ? (
+                                    {match.prediction ? (
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20 animate-bounce">
-                                                    <Zap className="w-3 h-3 text-slate-900 fill-current" />
+                                                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                                                    <TrendingUp className="w-3 h-3 text-white" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t.liveScore.liveTip}</div>
-                                                    <div className="text-xs font-black text-slate-900 dark:text-white uppercase italic">{match.liveTip}</div>
+                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Calculated Probabilities</div>
                                                 </div>
                                             </div>
 
-                                            {/* Mini Probability Bar */}
-                                            {match.prediction && (
-                                                <div className="flex gap-0.5 h-1.5 w-16">
-                                                    <div className="h-full bg-blue-500 rounded-l-full" style={{ width: `${match.prediction.home}%` }} />
-                                                    <div className="h-full bg-slate-300" style={{ width: `${match.prediction.draw}%` }} />
-                                                    <div className="h-full bg-blue-300 rounded-r-full" style={{ width: `${match.prediction.away}%` }} />
-                                                </div>
-                                            )}
+                                            <div className="flex gap-0.5 h-1.5 w-16">
+                                                <div className="h-full bg-blue-500 rounded-l-full" style={{ width: `${match.prediction.home}%` }} />
+                                                <div className="h-full bg-slate-300" style={{ width: `${match.prediction.draw}%` }} />
+                                                <div className="h-full bg-blue-300 rounded-r-full" style={{ width: `${match.prediction.away}%` }} />
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="flex items-center justify-center gap-2 py-1 opacity-50">

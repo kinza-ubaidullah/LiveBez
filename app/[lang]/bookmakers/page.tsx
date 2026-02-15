@@ -23,7 +23,12 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
     const bookmakers = await prisma.bookmaker.findMany({
         include: {
             translations: {
-                where: { languageCode: lang },
+                where: {
+                    OR: [
+                        { languageCode: lang },
+                        { languageCode: 'en' }
+                    ]
+                },
                 include: { seo: true }
             }
         },
@@ -43,7 +48,7 @@ export default async function BookmakersPage({ params }: { params: Promise<{ lan
 
             <div className="space-y-6">
                 {bookmakers.map((bm, index) => {
-                    const trans = (bm as any).translations[0];
+                    const trans = bm.translations.find((t: any) => t.languageCode === lang) || bm.translations[0];
                     if (!trans) return null;
 
                     return (

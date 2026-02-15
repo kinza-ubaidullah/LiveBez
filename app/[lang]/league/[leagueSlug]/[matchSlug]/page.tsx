@@ -189,11 +189,11 @@ export default async function MatchPage({ params }: { params: Promise<{ lang: st
                         {/* Prediction Widget */}
                         <div className="premium-card p-8 bg-white dark:bg-slate-900 border-none shadow-2xl sticky top-24">
                             <div className="text-center mb-10">
-                                <div className="inline-block px-4 py-1.5 bg-primary rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-lg mb-6">Master Pick</div>
-                                <h3 className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white mb-2 underline decoration-primary decoration-4 underline-offset-8">
-                                    {translateTip(match.mainTip || "Home Win")}
+                                <div className="inline-block px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 mb-6">Match Win Probability</div>
+                                <h3 className="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white mb-2 uppercase">
+                                    {match.homeTeam} VS {match.awayTeam}
                                 </h3>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-4">AI Confidence: {match.confidence || 78}%</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-4 underline decoration-primary decoration-4 underline-offset-8">Algorithmic Insight</p>
                             </div>
 
                             {prediction && (

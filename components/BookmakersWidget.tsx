@@ -13,7 +13,12 @@ export default async function BookmakersWidget({ lang }: BookmakersWidgetProps) 
     const bookmakers = await prisma.bookmaker.findMany({
         include: {
             translations: {
-                where: { languageCode: lang }
+                where: {
+                    OR: [
+                        { languageCode: lang },
+                        { languageCode: 'en' }
+                    ]
+                }
             }
         },
         orderBy: { rating: 'desc' },
@@ -21,7 +26,7 @@ export default async function BookmakersWidget({ lang }: BookmakersWidgetProps) 
     });
 
     const getTranslation = (bm: any) => {
-        return bm.translations[0] || bm.translations.find((t: any) => t.languageCode === 'en') || null;
+        return bm.translations.find((t: any) => t.languageCode === lang) || bm.translations[0];
     };
 
     if (bookmakers.length === 0) return null;

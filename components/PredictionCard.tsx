@@ -106,7 +106,7 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                     </div>
 
                     <h3 className="text-base md:text-xl font-black text-slate-900 dark:text-white uppercase leading-tight tracking-tighter mb-4 md:mb-6 group-hover:text-blue-600 transition-colors line-clamp-2">
-                        {match.homeTeam} vs {match.awayTeam} prediction: Match preview, betting odds and tips
+                        {match.homeTeam} vs {match.awayTeam} prediction: Complete Match analysis
                     </h3>
 
                     <div className="flex flex-wrap items-center gap-4">
@@ -135,13 +135,6 @@ export default function PredictionCard({ lang, match }: PredictionCardProps) {
                                 </div>
                             </div>
                         )}
-
-                        <div className="ml-auto flex items-center gap-4">
-                            <div className="flex flex-col items-end">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">PICK</span>
-                                <span className="text-xs md:text-sm font-black text-green-600 uppercase tracking-tighter">{match.mainTip || "Home Win"}</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
