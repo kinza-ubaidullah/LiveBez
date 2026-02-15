@@ -41,7 +41,7 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
 
     const fetchLiveScores = async () => {
         try {
-            const res = await fetch("/api/live-scores");
+            const res = await fetch(`/api/live-scores?lang=${lang}`);
             const data = await res.json();
             if (data.success) {
                 setLeagues(data.data);
@@ -70,7 +70,7 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
                         <Activity className="w-6 h-6 text-blue-600" />
                     </div>
                 </div>
-                <p className="mt-6 text-xs font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">Scanning Live Matches...</p>
+                <p className="mt-6 text-xs font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">{t.liveScore.scanning}</p>
             </div>
         );
     }
@@ -91,9 +91,9 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
                     <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20 dark:to-white/5" />
                     <Trophy className="w-10 h-10 text-slate-300 dark:text-slate-600" />
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-3">No Live Action</h3>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-3">{t.liveScore.noLive}</h3>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-sm leading-relaxed">
-                    The arena is quiet. Check back later for real-time scores and AI-powered in-play predictions.
+                    {t.liveScore.noLiveDesc}
                 </p>
             </div>
         );
@@ -116,7 +116,7 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-100 dark:border-red-900/30">
                             <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-[ping_1.5s_ease-in-out_infinite]" />
-                            <span className="text-[8px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest">Live</span>
+                            <span className="text-[8px] font-black text-red-600 dark:text-red-400 uppercase tracking-widest">{t.ui.live}</span>
                         </div>
                     </div>
 
@@ -183,7 +183,7 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
                                                     <Zap className="w-3 h-3 text-slate-900 fill-current" />
                                                 </div>
                                                 <div>
-                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Live Tip</div>
+                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t.liveScore.liveTip}</div>
                                                     <div className="text-xs font-black text-slate-900 dark:text-white uppercase italic">{match.liveTip}</div>
                                                 </div>
                                             </div>
@@ -200,7 +200,7 @@ export default function LiveScoreDashboard({ lang, t }: { lang: string, t: any }
                                     ) : (
                                         <div className="flex items-center justify-center gap-2 py-1 opacity-50">
                                             <Target className="w-3 h-3 text-slate-400" />
-                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Analyzing gameplay...</span>
+                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t.liveScore.analyzing}</span>
                                         </div>
                                     )}
                                 </div>

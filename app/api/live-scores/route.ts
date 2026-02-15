@@ -1,11 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { apiSports } from "@/lib/sports-api";
 import prisma from "@/lib/db";
 import { calculateLiveProbability } from "@/lib/live-algorithm";
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
     try {
-        console.log("🔌 Connecting to Real Sports API for Live Scores...");
+        const { searchParams } = new URL(request.url);
+        const lang = searchParams.get('lang') || 'en';
+
+        console.log(`🔌 Connecting to Real Sports API for Live Scores (Lang: ${lang})...`);
+
         // Fetch live matches
         const liveMatches = await apiSports.getLiveScores({ live: 'all' });
         console.log(`✅ API Response Received: ${liveMatches?.length || 0} live matches found.`);
@@ -16,9 +22,15 @@ export async function GET() {
 
         // Get predictions for these matches from our DB
         const apiMatchIds = liveMatches.map((m: any) => m.fixture.id.toString());
+
         const dbMatches = await prisma.match.findMany({
             where: { apiSportsId: { in: apiMatchIds } },
-            include: { prediction: true, translations: true }
+            include: {
+                prediction: true,
+                translations: {
+                    where: { languageCode: lang }
+                }
+            }
         });
 
         const predictionsMap = new Map();
@@ -66,10 +78,12 @@ export async function GET() {
                 else liveTip = "Away or Draw";
             }
 
-            const matchSlug = dbMatches.find(d => d.apiSportsId === m.fixture.id.toString())?.translations[0]?.slug;
+            // Get match slug for the requested language
+            const matchRecord = dbMatches.find(d => d.apiSportsId === m.fixture.id.toString());
+            const matchSlug = matchRecord?.translations[0]?.slug;
 
             leaguesMap.get(leagueId).matches.push({
-                id: m.fixture.id,
+                id: m.fixture.id.toString(),
                 homeTeam: m.teams.home.name,
                 homeTeamLogo: m.teams.home.logo,
                 awayTeam: m.teams.away.name,
@@ -92,4 +106,3 @@ export async function GET() {
         return NextResponse.json({ success: false, error: "Failed to fetch live scores" }, { status: 500 });
     }
 }
-

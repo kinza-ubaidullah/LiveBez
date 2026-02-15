@@ -1,20 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { oddsApi, SOCCER_SPORTS, Event } from '@/lib/odds-api';
+import prisma from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 600; // Revalidate every 10 minutes (this is a free endpoint)
+export const revalidate = 60;
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
-    const sport = searchParams.get('sport') || SOCCER_SPORTS.EPL;
+    const limit = parseInt(searchParams.get('limit') || '20');
 
     try {
-        const response = await oddsApi.getEvents(sport);
+        // Fetch upcoming scheduled matches from DB
+        const matches = await prisma.match.findMany({
+            where: {
+                status: 'SCHEDULED',
+                date: { gte: new Date() }
+            },
+            take: limit,
+            orderBy: {
+                date: 'asc'
+            },
+            include: {
+                league: {
+                    include: {
+                        translations: {
+                            where: { languageCode: 'en' }
+                        }
+                    }
+                },
+                translations: {
+                    where: { languageCode: 'en' }
+                }
+            }
+        });
 
-        // Sort by commence time (upcoming first)
-        const events = response.data.sort((a, b) =>
-            new Date(a.commence_time).getTime() - new Date(b.commence_time).getTime()
-        );
+        // Map to a format similar to what the frontend might expect, or a cleaner one
+        const events = matches.map(m => ({
+            id: m.id,
+            sport_key: m.league.translations[0]?.slug || 'soccer', // approximated
+            sport_title: m.league.translations[0]?.name || 'Soccer',
+            commence_time: m.date.toISOString(),
+            home_team: m.homeTeam,
+            away_team: m.awayTeam,
+            api_id: m.apiSportsId
+        }));
 
         return NextResponse.json({
             success: true,
@@ -22,18 +50,7 @@ export async function GET(request: NextRequest) {
             total: events.length,
         });
     } catch (error: any) {
-        console.error('Events API error:', error.message);
-
-        // Return empty data for network errors (graceful degradation)
-        if (error.message === 'API_NETWORK_ERROR' || error.message === 'API_RATE_LIMIT_EXCEEDED') {
-            return NextResponse.json({
-                success: true,
-                data: [],
-                total: 0,
-                message: 'Live data temporarily unavailable. Showing cached content.',
-            });
-        }
-
+        console.error('Events DB Error:', error.message);
         return NextResponse.json(
             { success: false, error: 'Failed to fetch events' },
             { status: 500 }

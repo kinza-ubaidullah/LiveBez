@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { apiSports } from '@/lib/sports-api';
-import { oddsApi } from '@/lib/odds-api';
 import { syncAndAnalyzeMatch } from '@/lib/analysis-service';
 
 export const dynamic = 'force-dynamic';
 
 const POPULAR_LEAGUES = [39, 140, 135, 78, 61, 2, 3]; // EPL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, UEL
 
-async function upsertLeague(leagueData: any) {
+async function upsertLeagueCached(leagueData: any, cache: Map<string, any>, languages: any[]) {
     const apiLeagueId = leagueData.id.toString();
+
+    // Check cache
+    if (cache.has(apiLeagueId)) {
+        return cache.get(apiLeagueId);
+    }
 
     let dbLeague = await prisma.league.findUnique({ where: { apiId: apiLeagueId } });
 
     if (!dbLeague) {
-        // Check if slug causes conflict
         const slug = leagueData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
         const existingTrans = await prisma.leagueTranslation.findUnique({
-            where: { slug },
+            where: { slug: `${slug}-en` }, // Check EN slug
             include: { league: true }
         });
 
@@ -29,8 +32,6 @@ async function upsertLeague(leagueData: any) {
             });
             dbLeague = await prisma.league.findUnique({ where: { id: existingTrans.leagueId } });
         } else {
-            const languages = await prisma.language.findMany({ where: { isVisible: true } });
-
             try {
                 dbLeague = await prisma.league.create({
                     data: {
@@ -45,7 +46,7 @@ async function upsertLeague(leagueData: any) {
                                 seo: {
                                     create: {
                                         title: leagueData.name,
-                                        description: `Betting tips for ${leagueData.name}`
+                                        description: `Live scores and stats for ${leagueData.name}`
                                     }
                                 }
                             }))
@@ -57,17 +58,24 @@ async function upsertLeague(leagueData: any) {
                 if (error.code === 'P2002') {
                     dbLeague = await prisma.league.findUnique({ where: { apiId: apiLeagueId } });
                 } else {
-                    throw error;
+                    console.error('Error creating league:', error);
+                    // Return null to skip if we trigger an unrecoverable error
+                    return null;
                 }
             }
         }
     } else {
+        // Optional: Update logo if changed
         if (dbLeague.logoUrl !== leagueData.logo) {
             await prisma.league.update({
                 where: { id: dbLeague.id },
                 data: { logoUrl: leagueData.logo }
             });
         }
+    }
+
+    if (dbLeague) {
+        cache.set(apiLeagueId, dbLeague);
     }
     return dbLeague;
 }
@@ -77,103 +85,86 @@ export async function GET(request: NextRequest) {
         let syncedCount = 0;
         let analysisCount = 0;
 
-        // 1. Fetch Odds in background for all major leagues
-        let allOdds: any[] = [];
-        const soccerLeagues = ['soccer_epl', 'soccer_spain_la_liga', 'soccer_germany_bundesliga', 'soccer_italy_serie_a', 'soccer_france_ligue_one'];
-
-        try {
-            const oddsPromises = soccerLeagues.map(sport =>
-                oddsApi.getOdds(sport, { regions: 'eu', markets: 'h2h' })
-                    .then(res => res.data)
-                    .catch(() => [])
-            );
-            const oddsResults = await Promise.all(oddsPromises);
-            allOdds = oddsResults.flat();
-        } catch (e) {
-            console.error("Odds fetch failed in sync route:", e);
-        }
-
-        // 2. Seed Popular Leagues
-        for (const leagueId of POPULAR_LEAGUES) {
-            try {
-                const standingsData = await apiSports.getStandings(leagueId.toString());
-                if (standingsData && standingsData.length > 0) {
-                    const leagueInfo = standingsData[0].league;
-                    await upsertLeague(leagueInfo);
-                }
-            } catch (err) {
-                console.error(`Failed to seed league ${leagueId}`, err);
-            }
-        }
-
+        // 1. Fetch Fixtures (Next 50 and Live) from API-Sports
         const { searchParams } = new URL(request.url);
         const dateParam = searchParams.get('date');
         const autoAnalyze = searchParams.get('analyze') === 'true';
 
-        // 3. Fetch Data (Next 50 and Live)
+        console.log(`[Sync] Starting sync. Date: ${dateParam || 'Next 50'}`);
+
         const upcoming = await apiSports.getLiveScores(dateParam ? { date: dateParam } : { next: '50' });
         const live = dateParam ? [] : await apiSports.getLiveScores({ live: 'all' });
 
+        // Deduplicate by ID
         const allMap = new Map();
         [...upcoming, ...live].forEach(f => allMap.set(f.fixture.id, f));
         const fixtures = Array.from(allMap.values());
 
-        const languages = await prisma.language.findMany({ where: { isVisible: true } });
+        console.log(`[Sync] Found ${fixtures.length} fixtures to process.`);
 
+        const languages = await prisma.language.findMany({ where: { isVisible: true } });
+        const leagueCache = new Map<string, any>();
+
+        // 2. Batch Fetch Existing Matches by API ID
+        const apiMatchIds = fixtures.map(f => f.fixture.id.toString());
+        const existingMatches = await prisma.match.findMany({
+            where: { apiSportsId: { in: apiMatchIds } }
+        });
+        const matchMap = new Map<string, any>();
+        existingMatches.forEach(m => matchMap.set(m.apiSportsId!, m));
+
+        // 3. Prepare fallback check for missing matches (by slug)
+        // Identify fixtures that are NOT in matchMap
+        const missingMatchFixtures = fixtures.filter(f => !matchMap.has(f.fixture.id.toString()));
+        const slugLookupMap = new Map<string, any>(); // Slug -> Fixture
+
+        if (missingMatchFixtures.length > 0) {
+            // Check finding matches by slug to link API ID
+            const slugsToCheck: string[] = [];
+
+            missingMatchFixtures.forEach(f => {
+                const slugDate = new Date(f.fixture.date).toISOString().split('T')[0];
+                const slugBase = `${f.teams.home.name}-vs-${f.teams.away.name}-${slugDate}`
+                    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                // Check default language (en) or first available
+                const checkSlug = `${slugBase}-${languages[0]?.code || 'en'}`;
+                slugsToCheck.push(checkSlug);
+                slugLookupMap.set(checkSlug, f);
+            });
+
+            const foundTranslations = await prisma.matchTranslation.findMany({
+                where: { slug: { in: slugsToCheck } },
+                select: { matchId: true, slug: true }
+            });
+
+            foundTranslations.forEach(t => {
+                // Determine which fixture this corresponds to
+                const f = slugLookupMap.get(t.slug);
+                if (f) {
+                    // We found a match ID for this fixture via slug
+                    // Add to matchMap with a placeholder object or handle in loop
+                    // Let's create a secondary map for "Found By Slug"
+                    slugLookupMap.set('FOUND_' + f.fixture.id, t.matchId);
+                }
+            });
+        }
+
+        // 4. Processing Loop
         for (const f of fixtures) {
-            const dbLeague = await upsertLeague(f.league);
+            const dbLeague = await upsertLeagueCached(f.league, leagueCache, languages);
             if (!dbLeague) continue;
 
             const apiMatchId = f.fixture.id.toString();
-            const slug = `${f.teams.home.name}-vs-${f.teams.away.name}-${f.fixture.date}`
-                .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
-            const existingMatch = await prisma.match.findFirst({
-                where: { apiSportsId: apiMatchId },
-                include: { translations: true }
-            });
-
-            // Normalize names for better matching
-            const normalize = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const apiHome = normalize(f.teams.home.name);
-            const apiAway = normalize(f.teams.away.name);
-
-            const matchOdds = allOdds.find(o => {
-                const oddsHome = normalize(o.home_team);
-                const oddsAway = normalize(o.away_team);
-                return (apiHome.includes(oddsHome) || oddsHome.includes(apiHome)) &&
-                    (apiAway.includes(oddsAway) || oddsAway.includes(apiAway));
-            });
-
-            let probabilityData = null;
-
-            if (matchOdds?.bookmakers?.length > 0) {
-                // H2H Extraction
-                const h2h = matchOdds.bookmakers[0].markets.find((m: any) => m.key === 'h2h');
-                if (h2h) {
-                    const homePrice = h2h.outcomes.find((o: any) => o.name === matchOdds.home_team)?.price;
-                    const awayPrice = h2h.outcomes.find((o: any) => o.name === matchOdds.away_team)?.price;
-                    const drawPrice = h2h.outcomes.find((o: any) => o.name === 'Draw')?.price;
-
-                    if (homePrice && awayPrice && drawPrice) {
-                        const hp = 1 / homePrice;
-                        const ap = 1 / awayPrice;
-                        const dp = 1 / drawPrice;
-                        const tot = hp + ap + dp;
-                        probabilityData = {
-                            home: Math.round((hp / tot) * 100),
-                            away: Math.round((ap / tot) * 100),
-                            draw: Math.round((dp / tot) * 100),
-                        };
-                    }
-                }
-            }
-
             let matchId = "";
+            let isNew = false;
 
-            if (existingMatch) {
+            if (matchMap.has(apiMatchId)) {
+                // Update Existing by API ID
+                const existing = matchMap.get(apiMatchId);
+                matchId = existing.id;
+
                 await prisma.match.update({
-                    where: { id: existingMatch.id },
+                    where: { id: matchId },
                     data: {
                         homeScore: f.goals.home,
                         awayScore: f.goals.away,
@@ -183,21 +174,17 @@ export async function GET(request: NextRequest) {
                         awayTeamLogo: f.teams.away.logo,
                     }
                 });
-                matchId = existingMatch.id;
             } else {
-                // Secondary check: Does a match with this slug already exist?
-                const existingTransBySlug = await prisma.matchTranslation.findFirst({
-                    where: { slug: `${slug}-${languages[0]?.code || 'en'}` },
-                    select: { matchId: true }
-                });
+                // Check if found by slug
+                const foundMatchId = slugLookupMap.get('FOUND_' + f.fixture.id);
 
-                if (existingTransBySlug) {
-                    matchId = existingTransBySlug.matchId;
-                    // Update the match that was found by slug
+                if (foundMatchId) {
+                    matchId = foundMatchId;
+                    // Link API ID and update
                     await prisma.match.update({
                         where: { id: matchId },
                         data: {
-                            apiSportsId: apiMatchId, // Link it now
+                            apiSportsId: apiMatchId,
                             homeScore: f.goals.home,
                             awayScore: f.goals.away,
                             status: f.fixture.status.short,
@@ -205,6 +192,13 @@ export async function GET(request: NextRequest) {
                         }
                     });
                 } else {
+                    // Create New Match
+                    isNew = true;
+                    // Re-calculate slug for creation
+                    const slugDate = new Date(f.fixture.date).toISOString().split('T')[0];
+                    const slugBase = `${f.teams.home.name}-vs-${f.teams.away.name}-${slugDate}`
+                        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
                     try {
                         const newMatch = await prisma.match.create({
                             data: {
@@ -219,17 +213,18 @@ export async function GET(request: NextRequest) {
                                 apiSportsId: apiMatchId,
                                 homeTeamLogo: f.teams.home.logo,
                                 awayTeamLogo: f.teams.away.logo,
-                                mainTip: probabilityData ? (probabilityData.home > probabilityData.away ? "Home Win" : "Away Win") : "Analysis Pending",
+                                mainTip: null, // No odds for now
                                 isFeatured: POPULAR_LEAGUES.includes(Number(f.league.id)),
                                 translations: {
                                     create: languages.map(lang => ({
                                         language: { connect: { code: lang.code } },
                                         name: `${f.teams.home.name} vs ${f.teams.away.name}`,
-                                        slug: `${slug}-${lang.code}`,
+                                        slug: `${slugBase}-${lang.code}`,
                                         status: 'PUBLISHED',
                                         seo: {
                                             create: {
-                                                title: `${f.teams.home.name} vs ${f.teams.away.name}`
+                                                title: `${f.teams.home.name} vs ${f.teams.away.name}`,
+                                                description: `Live score and stats for ${f.teams.home.name} vs ${f.teams.away.name}`
                                             }
                                         }
                                     }))
@@ -239,77 +234,18 @@ export async function GET(request: NextRequest) {
                         matchId = newMatch.id;
                     } catch (createErr: any) {
                         if (createErr.code === 'P2002') {
-                            // Race condition or slug collision we missed
-                            const collisionMatch = await prisma.matchTranslation.findFirst({
-                                where: { slug: `${slug}-${languages[0]?.code || 'en'}` },
-                                select: { matchId: true }
-                            });
-                            if (collisionMatch) {
-                                matchId = collisionMatch.matchId;
-                            } else {
-                                console.error("True slug collision in create:", createErr);
-                                continue;
-                            }
-                        } else {
-                            throw createErr;
+                            continue;
                         }
+                        console.error("Create Match Error:", createErr);
                     }
                 }
-            }
-
-            // Sync Predictions/Odds
-            if (probabilityData) {
-                const h2h = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'h2h');
-                const btts = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'btts');
-                const totals = matchOdds?.bookmakers?.[0]?.markets?.find((m: any) => m.key === 'totals');
-
-                let bttsProbValue = 50;
-                if (btts) {
-                    const yes = btts.outcomes.find((o: any) => o.name === 'Yes')?.price;
-                    const no = btts.outcomes.find((o: any) => o.name === 'No')?.price;
-                    if (yes && no) bttsProbValue = Math.round((1 / yes / (1 / yes + 1 / no)) * 100);
-                }
-
-                let overProbValue = 50;
-                let underProbValue = 50;
-                if (totals) {
-                    const over = totals.outcomes.find((o: any) => o.name === 'Over' && o.point === 2.5)?.price;
-                    const under = totals.outcomes.find((o: any) => o.name === 'Under' && o.point === 2.5)?.price;
-                    if (over && under) {
-                        overProbValue = Math.round((1 / over / (1 / over + 1 / under)) * 100);
-                        underProbValue = 100 - overProbValue;
-                    }
-                }
-
-                await prisma.prediction.upsert({
-                    where: { matchId: matchId },
-                    update: {
-                        winProbHome: probabilityData.home,
-                        winProbAway: probabilityData.away,
-                        winProbDraw: probabilityData.draw,
-                        bttsProb: bttsProbValue,
-                        overProb: overProbValue,
-                        underProb: underProbValue,
-                    },
-                    create: {
-                        matchId: matchId,
-                        winProbHome: probabilityData.home,
-                        winProbAway: probabilityData.away,
-                        winProbDraw: probabilityData.draw,
-                        bttsProb: bttsProbValue,
-                        overProb: overProbValue,
-                        underProb: underProbValue,
-                    }
-                });
             }
 
             // 4. Auto-Generate Articles (Analysis)
-            // Trigger analysis for new matches in popular leagues OR if explicitly requested
-            const isPopular = POPULAR_LEAGUES.includes(f.league.id);
-            const isNew = !existingMatch;
-            const isLiveUpdate = !!existingMatch && (f.fixture.status.short === '1H' || f.fixture.status.short === '2H' || f.fixture.status.short === 'FT');
+            const isPopular = POPULAR_LEAGUES.includes(Number(f.league.id));
+            const isLiveUpdate = !!matchId && !isNew && (f.fixture.status.short === '1H' || f.fixture.status.short === '2H' || f.fixture.status.short === 'FT');
 
-            if (autoAnalyze || (isPopular && (isNew || isLiveUpdate))) {
+            if (matchId && (autoAnalyze || (isPopular && (isNew || isLiveUpdate)))) {
                 // Analyzing EN by default to populate the blog
                 await syncAndAnalyzeMatch(matchId, 'en', autoAnalyze || isLiveUpdate);
                 analysisCount++;
@@ -328,4 +264,3 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
-

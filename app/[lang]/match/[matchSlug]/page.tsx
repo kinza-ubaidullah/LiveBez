@@ -56,48 +56,57 @@ export default async function MatchSlugPage({ params }: { params: Promise<{ lang
         });
 
         // 2. If not in DB, try fetching from API-Sports (sync on demand)
-        // Only try this if matchSlug looks like an API ID (numeric)
+        // Only try this if matchSlug looks like an API ID (numeric) or a valid ID format
         if (!matchById && /^\d+$/.test(matchSlug)) {
-            // Dynamic import to avoid circular dep issues if any, or just import
-            const { ensureMatchFromApi } = await import("@/lib/match-service");
-            const newMatch = await ensureMatchFromApi(matchSlug);
-            if (newMatch) {
-                // Re-fetch with relations to match expected structure
-                matchById = await prisma.match.findUnique({
-                    where: { id: newMatch.id },
-                    include: {
-                        translations: { where: { languageCode: lang } },
-                        league: {
-                            include: {
-                                translations: { where: { languageCode: lang } }
+            console.log(`[MatchPage] Match not found in DB. Attempting to sync from API for ID: ${matchSlug}`);
+            try {
+                // Dynamic import to avoid circular dep issues if any, or just import
+                const { ensureMatchFromApi } = await import("@/lib/match-service");
+
+                // Ensure ID is passed as string to match existing logic
+                const newMatch = await ensureMatchFromApi(matchSlug);
+
+                if (newMatch) {
+                    console.log(`[MatchPage] Successfully synced match: ${newMatch.id}`);
+                    // Re-fetch with relations to match expected structure and confirm commit
+                    matchById = await prisma.match.findUnique({
+                        where: { id: newMatch.id },
+                        include: {
+                            translations: { where: { languageCode: lang } },
+                            league: {
+                                include: {
+                                    translations: { where: { languageCode: lang } }
+                                }
                             }
                         }
-                    }
-                }) as any;
+                    }) as any;
+                } else {
+                    console.error(`[MatchPage] Failed to sync match ${matchSlug} from API (ensureMatchFromApi returned null).`);
+                }
+            } catch (err) {
+                console.error(`[MatchPage] Error during ensureMatchFromApi:`, err);
+            }
+        }
+        if (matchById) {
+            if (matchById.translations && matchById.translations.length > 0) {
+                matchTrans = matchById.translations[0] as any;
+                (matchTrans as any).match = matchById;
+            } else {
+                // Create dummy trans if needed, though strictly we need translation for slug
+                matchTrans = {
+                    languageCode: lang,
+                    slug: matchSlug,
+                    match: matchById,
+                    name: `${matchById.homeTeam} vs ${matchById.awayTeam}`,
+                } as any;
             }
         }
 
-        if (matchById && matchById.translations && matchById.translations.length > 0) {
-            matchTrans = matchById.translations[0] as any;
-            (matchTrans as any).match = matchById;
-        } else if (matchById) {
-            // If match exists but no translation for this lang, create a dummy trans object
-            matchTrans = {
-                languageCode: lang,
-                slug: matchSlug,
-                match: matchById,
-                name: `${matchById.homeTeam} vs ${matchById.awayTeam}`,
-                // ... other fields
-            } as any;
+        if (!matchTrans) {
+            notFound();
         }
     }
 
-    if (!matchTrans || matchTrans.languageCode !== lang) {
-        notFound();
-    }
-
     const leagueSlug = matchTrans.match.league.translations[0]?.slug || 'any';
-
-    // Redirect to the canonical league-nested URL
-    redirect(`/${lang}/league/${leagueSlug}/${matchSlug}`);
+    redirect(`/${lang}/league/${leagueSlug}/${matchTrans.slug}`);
 }

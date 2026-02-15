@@ -6,13 +6,24 @@
         "liveScores": "Live Scores",
         "admin": "Admin"
     },
+    "home": {
+        "liveAnalysis": "Live Analysis Active",
+        "waitingSync": "Waiting for live data sync...",
+        "featuredHeadlines": "Featured Headlines",
+        "stayTuned": "Stay tuned for news...",
+        "viewFullBlog": "View Full Blog",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "todaysPicks": "Today's Prediction Picks"
+    },
     "hero": {
         "badge": "Official LiveBaz Platform",
         "title1": "Your Hub for",
         "titleHighlight": "Live Scores",
         "title2": "& Expert Predictions",
         "description": "Access real-time data, deep analytics, and professional insights for the world's most competitive football leagues.",
-        "startWinning": "Start Winning"
+        "startWinning": "Start Winning",
+        "learnMore": "Learn More"
     },
     "leagues": {
         "title": "Explore Leagues",
@@ -128,5 +139,16 @@
         "btts": "Both Teams to Score",
         "noMatches": "No Matches",
         "noCriteria": "No matches currently meet the algorithmic criteria for this category."
+    },
+    "liveScore": {
+        "analysisEngine": "Live Analysis Engine Online",
+        "realTime": "Real-Time",
+        "hub": "& Analysis Hub",
+        "description": "Real-time match updates, expert win percentages, and deep algorithmic analysis for every ongoing game.",
+        "scanning": "Scanning Live Matches...",
+        "noLive": "No Live Action",
+        "noLiveDesc": "The arena is quiet. Check back later for real-time scores and AI-powered in-play predictions.",
+        "analyzing": "Analyzing gameplay...",
+        "liveTip": "Live Tip"
     }
 }

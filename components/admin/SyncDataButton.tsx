@@ -2,13 +2,22 @@
 
 import { useState } from "react";
 import { syncFixtures, syncLiveScores } from "@/lib/actions/sync-actions";
-import { SOCCER_SPORTS } from "@/lib/odds-api";
 
 export default function SyncDataButton() {
     const [loading, setLoading] = useState(false);
     const [liveLoading, setLiveLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
-    const [selectedSport, setSelectedSport] = useState(SOCCER_SPORTS.EPL);
+    const [selectedSport, setSelectedSport] = useState('soccer_epl');
+
+    const sports = [
+        { key: 'soccer_epl', name: 'Premier League' },
+        { key: 'soccer_spain_la_liga', name: 'La Liga' },
+        { key: 'soccer_germany_bundesliga', name: 'Bundesliga' },
+        { key: 'soccer_italy_serie_a', name: 'Serie A' },
+        { key: 'soccer_france_ligue_one', name: 'Ligue 1' },
+        { key: 'soccer_uefa_champs_league', name: 'Champions League' },
+        { key: 'soccer_uefa_europa_league', name: 'Europa League' },
+    ];
 
     const handleSync = async () => {
         setLoading(true);
@@ -34,8 +43,8 @@ export default function SyncDataButton() {
         try {
             for (const sport of sports) {
                 const res = await syncFixtures(sport.key);
-                totalCreated += res.created;
-                totalUpdated += res.updated;
+                totalCreated += res.created || 0;
+                totalUpdated += res.updated || 0;
                 if (res.errors) allErrors.push(...res.errors);
             }
             setResult({ success: true, created: totalCreated, updated: totalUpdated, errors: allErrors });
@@ -60,26 +69,17 @@ export default function SyncDataButton() {
         }
     };
 
-    const sports = [
-        { key: SOCCER_SPORTS.EPL, name: "Premier League" },
-        { key: SOCCER_SPORTS.LA_LIGA, name: "La Liga" },
-        { key: SOCCER_SPORTS.BUNDESLIGA, name: "Bundesliga" },
-        { key: SOCCER_SPORTS.SERIE_A, name: "Serie A" },
-        { key: SOCCER_SPORTS.LIGUE_1, name: "Ligue 1" },
-        { key: SOCCER_SPORTS.CHAMPIONS_LEAGUE, name: "Champions League" },
-    ];
-
     return (
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <span className="text-2xl">🔄</span>
-                Sync Live Data
+                Sync Live Data (API-Sports)
             </h3>
 
             <div className="space-y-6">
-                {/* Fixtures & Odds Sync */}
+                {/* Fixtures Sync */}
                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
-                    <h4 className="font-bold text-sm uppercase tracking-wider text-slate-500">Fixtures & Odds</h4>
+                    <h4 className="font-bold text-sm uppercase tracking-wider text-slate-500">Fixtures & Schedule</h4>
                     <div>
                         <label className="block text-xs font-bold text-slate-600 mb-2">Select League</label>
                         <select
@@ -129,7 +129,6 @@ export default function SyncDataButton() {
                             🌍 Sync All Major Leagues
                         </button>
                     </div>
-                    <p className="text-[10px] text-slate-400">Pulls data from The Odds API.</p>
                 </div>
 
                 {/* Live Scores Sync */}

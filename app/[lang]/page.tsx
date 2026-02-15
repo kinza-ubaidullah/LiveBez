@@ -54,30 +54,34 @@ export default async function Home({
     const targetDate = day === 'tomorrow' ? tomorrow : today;
     const dateString = targetDate.toISOString().split('T')[0];
 
-    // Safe fetch helpers
-    const safeFetch = async (promise: Promise<any>, fallback: any) => {
-        try {
-            return await promise || fallback;
-        } catch (e) {
-            console.error("Database query failed in page.tsx:", e);
-            return fallback;
-        }
-    };
+    // Safe fetch helper replaced with explicit try-catch for better error handling visibility
 
-    leagues = await safeFetch(prisma.league?.findMany({
-        where: {
-            translations: { some: { languageCode: lang } },
-            isFeatured: true
-        },
-        include: { translations: { where: { languageCode: lang } } }
-    }), []);
+    // Fetch Leagues
+    try {
+        leagues = await prisma.league?.findMany({
+            where: {
+                translations: { some: { languageCode: lang } },
+                isFeatured: true
+            },
+            include: { translations: { where: { languageCode: lang } } }
+        });
+    } catch (e) {
+        console.error("Failed to fetch leagues (likely DB connection issue):", (e as Error).message);
+        leagues = [];
+    }
 
-    featuredArticles = await safeFetch(prisma.article?.findMany({
-        where: { published: true, translations: { some: { languageCode: lang } } },
-        include: { translations: { where: { languageCode: lang } } },
-        take: 4,
-        orderBy: { createdAt: 'desc' }
-    }), []);
+    // Fetch Featured Articles
+    try {
+        featuredArticles = await prisma.article?.findMany({
+            where: { published: true, translations: { some: { languageCode: lang } } },
+            include: { translations: { where: { languageCode: lang } } },
+            take: 4,
+            orderBy: { createdAt: 'desc' }
+        });
+    } catch (e) {
+        console.error("Failed to fetch featured articles:", (e as Error).message);
+        featuredArticles = [];
+    }
 
     // Fetch Matches for the target day
     const startOfDay = new Date(targetDate);
@@ -85,29 +89,40 @@ export default async function Home({
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    matches = await safeFetch(prisma.match.findMany({
-        where: {
-            date: { gte: startOfDay, lte: endOfDay },
-            translations: { some: { languageCode: lang } }
-        },
-        include: {
-            translations: { where: { languageCode: lang } },
-            prediction: true,
-            league: {
-                include: {
-                    translations: { where: { languageCode: lang } }
+    try {
+        matches = await prisma.match.findMany({
+            where: {
+                date: { gte: startOfDay, lte: endOfDay },
+                translations: { some: { languageCode: lang } }
+            },
+            include: {
+                translations: { where: { languageCode: lang } },
+                prediction: true,
+                league: {
+                    include: {
+                        translations: { where: { languageCode: lang } }
+                    }
                 }
-            }
-        },
-        orderBy: { date: 'asc' }
-    }), []);
+            },
+            orderBy: { date: 'asc' }
+        });
+    } catch (e) {
+        console.error("Matches DB Fetch Error:", (e as Error).message);
+        // If DB is unreachable, we will fall back to API below
+        matches = [];
+    }
 
     // --- Automatic Background Sync Logic (Today & Tomorrow) ---
+    let lastSync = null;
     if (day === 'today' || day === 'tomorrow') {
-        const lastSync = await safeFetch((prisma as any).syncLog?.findFirst({
-            where: { type: 'Matches' },
-            orderBy: { createdAt: 'desc' }
-        }), null);
+        try {
+            lastSync = await (prisma as any).syncLog?.findFirst({
+                where: { type: 'Matches' },
+                orderBy: { createdAt: 'desc' }
+            });
+        } catch (e) {
+            console.error("SyncLog fetch failed:", (e as Error).message);
+        }
 
         const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
 
@@ -177,7 +192,7 @@ export default async function Home({
 
                             <div className="relative z-10 p-6 md:p-12 space-y-4 md:space-y-8 max-w-2xl">
                                 <div className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-blue-600 border border-blue-400/30 rounded-full text-[7px] md:text-[9px] font-black text-white uppercase tracking-[0.2em] shadow-xl">
-                                    YOU ARE FOR LIFE SPORTS AND EXPERT
+                                    {t.hero.badge}
                                 </div>
                                 <h2 className="text-3xl md:text-5xl lg:text-7xl font-black text-white leading-[0.9] md:leading-[0.85] tracking-tighter uppercase italic drop-shadow-2xl">
                                     {t.hero.title1} <br />
@@ -192,7 +207,7 @@ export default async function Home({
                                         {t.hero.startWinning}
                                     </Link>
                                     <button className="bg-white/5 backdrop-blur-xl text-white border border-white/10 px-6 md:px-10 py-3.5 md:py-5 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all">
-                                        Learn More
+                                        {t.hero.learnMore}
                                     </button>
                                 </div>
                             </div>
@@ -204,12 +219,12 @@ export default async function Home({
                                 <div className="flex items-center gap-4">
                                     <div className="w-3 h-3 rounded-full bg-red-600 animate-pulse shadow-[0_0_12px_rgba(220,38,38,0.5)]" />
                                     <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">
-                                        Today's Prediction Picks
+                                        {t.home.todaysPicks}
                                     </h2>
                                 </div>
                                 <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-full">
                                     <Activity className="w-3 h-3 text-blue-600 animate-pulse" />
-                                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Live Analysis Active</span>
+                                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.home.liveAnalysis}</span>
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -217,13 +232,13 @@ export default async function Home({
                                     href={`/${lang}?day=today`}
                                     className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${day === 'today' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:border-blue-600 hover:text-blue-600'}`}
                                 >
-                                    Today
+                                    {t.home.today}
                                 </Link>
                                 <Link
                                     href={`/${lang}?day=tomorrow`}
                                     className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${day === 'tomorrow' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:border-blue-600 hover:text-blue-600'}`}
                                 >
-                                    Tomorrow
+                                    {t.home.tomorrow}
                                 </Link>
                             </div>
 
@@ -234,7 +249,7 @@ export default async function Home({
                                     ))
                                 ) : (
                                     <div className="portal-card p-24 text-center border-2 border-dashed border-slate-200 dark:border-slate-800">
-                                        <div className="text-slate-400 font-bold uppercase tracking-widest text-xs">Waiting for live data sync...</div>
+                                        <div className="text-slate-400 font-bold uppercase tracking-widest text-xs">{t.home.waitingSync}</div>
                                     </div>
                                 )}
                             </div>
@@ -250,7 +265,7 @@ export default async function Home({
                             <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-6">
                                 <div className="flex items-center gap-3">
                                     <Trophy className="w-5 h-5 text-blue-600" />
-                                    <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Featured Headlines</h4>
+                                    <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{t.home.featuredHeadlines}</h4>
                                 </div>
                             </div>
                             <div className="space-y-6">
@@ -286,12 +301,12 @@ export default async function Home({
                                     ))
                                 ) : (
                                     <div className="text-center py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        Stay tuned for news...
+                                        {t.home.stayTuned}
                                     </div>
                                 )}
                             </div>
                             <Link href={`/${lang}/blog`} className="block w-full text-center py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-950 transition-all">
-                                View Full Blog
+                                {t.home.viewFullBlog}
                             </Link>
                         </div>
                     </aside>

@@ -45,12 +45,14 @@ export default function Navbar({ lang, t, languages, leagues, bookmakers }: Navb
             const lastSync = localStorage.getItem('last_odds_sync');
             const now = Date.now();
             if (!lastSync || now - parseInt(lastSync) > 5 * 60 * 1000) {
-                try {
-                    await fetch('/api/sync/matches');
-                    localStorage.setItem('last_odds_sync', now.toString());
-                } catch (e) {
-                    console.error("Sync failed", e);
-                }
+                // Determine if we should really sync client-side. 
+                // Client-side syncing of this magnitude (syncing entire leagues) is dangerous for performance and rate limits.
+                // It is better to DISABLE automatic client-side sync and rely on Admin Panel or logical triggers (cron).
+                // However, if the user wants "RatingBet" style, maybe we just poll live scores lightly.
+
+                // Disabling heavy sync from Navbar to prevent "Failed to fetch" on every page load if API is busy.
+                // We will only update the timestamp to avoid retry loops.
+                localStorage.setItem('last_odds_sync', now.toString());
             }
         };
         syncData();

@@ -38,14 +38,14 @@ export default async function LiveScorePage({ params }: { params: Promise<{ lang
                 <div className="container mx-auto px-4 lg:px-6 relative z-10 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-8 animate-pulse text-blue-400">
                         <Activity className="w-4 h-4" />
-                        Live Analysis Engine Online
+                        {t.liveScore.analysisEngine}
                     </div>
                     <h1 className="text-4xl md:text-7xl font-black uppercase italic tracking-tighter mb-6 leading-none">
-                        Real-Time <span className="text-blue-500">LiveScore</span> <br />
-                        <span className="text-slate-400">& Analysis Hub</span>
+                        {t.liveScore.realTime} <span className="text-blue-500">LiveScore</span> <br />
+                        <span className="text-slate-400">{t.liveScore.hub}</span>
                     </h1>
                     <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-lg font-medium leading-relaxed uppercase tracking-wide">
-                        Real-time match updates, expert win percentages, and deep algorithmic analysis for every ongoing game.
+                        {t.liveScore.description}
                     </p>
                 </div>
                 {/* Decorative curve */}
